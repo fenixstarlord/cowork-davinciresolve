@@ -4,13 +4,5 @@
   "description": "Control DaVinci Resolve from Claude — execute API calls, create timelines, manage media, render projects. Requires Resolve to be running locally.",
   "author": {
     "name": "fenixstarlord"
-  },
-  "mcpServers": {
-    "davinci-resolve": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "${CLAUDE_PLUGIN_ROOT}/mcp_server.py"],
-      "env": {}
-    }
   }
 }

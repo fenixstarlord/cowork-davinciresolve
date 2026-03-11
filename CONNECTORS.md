@@ -4,7 +4,15 @@ This plugin uses a local MCP server (`mcp_server.py`) to bridge Claude and DaVin
 
 ## `~~resolve` — DaVinci Resolve MCP Server
 
-**Transport:** stdio (launched automatically when the plugin is active)
+**Transport:** stdio
+
+### Why setup.sh is required
+
+Cowork runs plugins inside a sandboxed Linux VM. The MCP server needs direct access to DaVinci Resolve's scripting API on your Mac — it can't reach Resolve from inside the sandbox.
+
+Running `./setup.sh` registers the MCP server in Claude Desktop's **native** config (`~/Library/Application Support/Claude/claude_desktop_config.json`), so it launches on your Mac alongside Claude Desktop — outside the sandbox, where it can talk to Resolve.
+
+The plugin itself (skills, commands, CLAUDE.md) still loads from the Cowork sandbox as normal.
 
 ### Tools
 
@@ -22,6 +30,13 @@ This plugin uses a local MCP server (`mcp_server.py`) to bridge Claude and DaVin
 | `resolve://fusion-docs` | Fusion scripting guide |
 | `resolve://examples` | Few-shot examples for common tasks |
 
+### Setup
+
+```bash
+./setup.sh              # Register MCP server in Claude Desktop
+./setup.sh --uninstall  # Remove MCP server from Claude Desktop
+```
+
 ### Requirements
 
 - **DaVinci Resolve must be running** on the same machine
@@ -32,7 +47,8 @@ This plugin uses a local MCP server (`mcp_server.py`) to bridge Claude and DaVin
 
 If the MCP tools are not available in your session:
 
-1. **Check that Resolve is running** — the server connects on startup
-2. **Check that `uv` is installed** — run `uv --version` in your terminal
-3. **Restart the session** — plugin MCP servers start when the session begins
-4. **Set `RESOLVE_SCRIPT_PATH`** if the scripting modules are in a non-default location
+1. **Run `./setup.sh`** — this registers the server in Claude Desktop's native config
+2. **Restart Claude Desktop** — MCP servers only load on app startup
+3. **Check that Resolve is running** — the server connects on startup
+4. **Check that `uv` is installed** — run `uv --version` in your terminal
+5. **Set `RESOLVE_SCRIPT_PATH`** env var if the scripting modules are in a non-default location

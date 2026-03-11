@@ -3,7 +3,7 @@
     "davinci-resolve": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "${CLAUDE_PLUGIN_ROOT}/mcp_server.py"],
+      "args": ["run", "mcp_server.py"],
       "env": {}
     }
   }
