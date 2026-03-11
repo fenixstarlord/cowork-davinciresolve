@@ -24,18 +24,34 @@ Or manually:
 pip install mcp
 ```
 
-### 2. Add the plugin to Claude Desktop
+### 2. Build the plugin zip
+
+The plugin must be uploaded as a **zip file**. Run the package script to create it:
+
+```bash
+./package.sh
+```
+
+This creates `davinci-resolve.zip` in the project root.
+
+Or manually:
+
+```bash
+zip -r davinci-resolve.zip .claude-plugin .mcp.json mcp_server.py CONNECTORS.md CLAUDE.md skills/ commands/ docs/ examples/ requirements.txt setup.sh
+```
+
+### 3. Upload to Claude Desktop
 
 1. Open **Claude Desktop** and switch to **Cowork** mode
 2. Click **Add Plugin** > **Personal** > **+** (plus)
 3. Select **Upload plugin**
-4. Choose the `resolvechat` folder
-5. The MCP server starts automatically when Claude needs it — no manual launch required
+4. Upload the `davinci-resolve.zip` file
+5. The plugin appears in your personal plugin list
 
-### 3. Start using it
+### 4. Start using it
 
 1. Make sure **DaVinci Resolve** is running
-2. Start a new Cowork session
+2. Start a new Cowork session with the plugin enabled
 3. Start asking Claude to do things in Resolve
 
 ### Custom Resolve script path
