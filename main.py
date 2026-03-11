@@ -5,12 +5,14 @@ index if needed, then launches the chat.
 """
 
 import os
+import platform
 import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 VENV_DIR = os.path.join(ROOT, ".venv")
-VENV_PYTHON = os.path.join(VENV_DIR, "bin", "python")
+_bin = "Scripts" if platform.system() == "Windows" else "bin"
+VENV_PYTHON = os.path.join(VENV_DIR, _bin, "python")
 REQUIREMENTS = os.path.join(ROOT, "requirements.txt")
 VECTORSTORE = os.path.join(ROOT, "vectorstore")
 MARKER = os.path.join(VENV_DIR, ".deps_installed")
