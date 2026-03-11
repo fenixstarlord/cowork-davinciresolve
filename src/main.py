@@ -3,6 +3,7 @@ CLI entrypoint for the DaVinci Resolve Chatbot.
 """
 
 import os
+import platform
 import sys
 
 import click
@@ -21,11 +22,24 @@ DOCS_PATH = os.getenv("DOCS_PATH", "./docs")
 VECTORSTORE_PATH = os.getenv("VECTORSTORE_PATH", "./vectorstore")
 
 
+def _default_resolve_script_path() -> str:
+    """Return the default Resolve scripting modules path for the current OS."""
+    system = platform.system()
+    if system == "Darwin":
+        return "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
+    elif system == "Windows":
+        return os.path.join(
+            os.environ.get("PROGRAMDATA", r"C:\ProgramData"),
+            r"Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting\Modules",
+        )
+    return "/opt/resolve/Developer/Scripting/Modules"
+
+
 def _get_resolve():
     """Try to connect to a running DaVinci Resolve instance."""
     resolve_script_path = os.getenv(
         "RESOLVE_SCRIPT_PATH",
-        "/opt/resolve/Developer/Scripting/Modules",
+        _default_resolve_script_path(),
     )
     if resolve_script_path not in sys.path:
         sys.path.append(resolve_script_path)
