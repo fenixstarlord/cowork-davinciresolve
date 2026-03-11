@@ -199,9 +199,32 @@ class ToolRegistry:
         """
         Format tools as Anthropic-compatible tool definitions
         for the LLM's function-calling interface.
+
+        Merges overloaded methods (same name, different signatures) into a
+        single tool with combined descriptions, and ensures all names are unique.
         """
-        llm_tools = []
+        seen: dict[str, dict] = {}
+
         for tool in self.tools:
+            tool_name = tool["name"].replace(".", "_")
+
+            if tool_name in seen:
+                # Merge overload: append description
+                existing = seen[tool_name]
+                existing["description"] += f" | Overload: {tool['description']}"
+                # Merge any new parameters
+                existing_param_names = {
+                    p for p in existing["input_schema"]["properties"]
+                }
+                for param in tool["parameters"]:
+                    if param["name"] not in existing_param_names:
+                        existing["input_schema"]["properties"][param["name"]] = {
+                            "type": "string",
+                            "description": param.get("description", ""),
+                        }
+                        # Overload params are optional
+                continue
+
             properties = {}
             required = []
             for param in tool["parameters"]:
@@ -212,23 +235,24 @@ class ToolRegistry:
                 if "default" not in param:
                     required.append(param["name"])
 
-            llm_tools.append({
-                "name": tool["name"].replace(".", "_"),
+            seen[tool_name] = {
+                "name": tool_name,
                 "description": f"{tool['name']}: {tool['description']}",
                 "input_schema": {
                     "type": "object",
                     "properties": properties,
                     "required": required,
                 },
-            })
-        return llm_tools
+            }
+
+        return list(seen.values())
 
     def get_tool_by_name(self, name: str) -> dict | None:
         """Look up a tool by its fully qualified name (e.g. 'Timeline.AddTrack')."""
         # Accept both dotted and underscore forms
-        normalized = name.replace("_", ".")
+        dotted = name.replace("_", ".", 1)  # Only replace first _ (Object_Method -> Object.Method)
         for tool in self.tools:
-            if tool["name"] == normalized or tool["name"] == name:
+            if tool["name"] == name or tool["name"] == dotted:
                 return tool
         return None
 
