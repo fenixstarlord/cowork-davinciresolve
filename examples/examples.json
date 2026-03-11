@@ -1,0 +1,77 @@
+[
+    {
+        "question": "How do I get a list of all timelines in the current project?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\ncount = project.GetTimelineCount()\ntimelines = [project.GetTimelineByIndex(i+1) for i in range(count)]\nfor t in timelines:\n    print(t.GetName())",
+        "tags": ["project", "timeline", "list"]
+    },
+    {
+        "question": "How do I import media files into the media pool?",
+        "answer": "media_storage = resolve.GetMediaStorage()\nmedia_pool = resolve.GetProjectManager().GetCurrentProject().GetMediaPool()\nfiles = [\"/path/to/clip1.mov\", \"/path/to/clip2.mp4\"]\nitems = media_storage.AddItemListToMediaPool(files)\nprint(f\"Imported {len(items)} items\")",
+        "tags": ["media", "import", "media pool", "media storage"]
+    },
+    {
+        "question": "How do I create a new timeline?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nmedia_pool = project.GetMediaPool()\ntimeline = media_pool.CreateEmptyTimeline(\"My New Timeline\")\nif timeline:\n    print(f\"Created timeline: {timeline.GetName()}\")\nelse:\n    print(\"Failed to create timeline\")",
+        "tags": ["timeline", "create", "media pool"]
+    },
+    {
+        "question": "How do I render the current timeline?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nproject.SetRenderSettings({\"TargetDir\": \"/path/to/output\", \"CustomName\": \"MyRender\"})\njob_id = project.AddRenderJob()\nif job_id:\n    project.StartRendering(job_id)\n    print(f\"Rendering started, job ID: {job_id}\")",
+        "tags": ["render", "export", "deliver"]
+    },
+    {
+        "question": "How do I switch to the Color page?",
+        "answer": "resolve.OpenPage(\"color\")\nprint(f\"Current page: {resolve.GetCurrentPage()}\")",
+        "tags": ["page", "navigate", "color"]
+    },
+    {
+        "question": "How do I get information about the current project?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nprint(f\"Project name: {project.GetName()}\")\nprint(f\"Timeline count: {project.GetTimelineCount()}\")\ntimeline = project.GetCurrentTimeline()\nif timeline:\n    print(f\"Current timeline: {timeline.GetName()}\")",
+        "tags": ["project", "info", "timeline"]
+    },
+    {
+        "question": "How do I add clips to a timeline?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nmedia_pool = project.GetMediaPool()\n# Get clips from the current media pool folder\nfolder = media_pool.GetCurrentFolder()\nclips = folder.GetClipList()\nif clips:\n    media_pool.AppendToTimeline(clips)\n    print(f\"Added {len(clips)} clips to timeline\")",
+        "tags": ["timeline", "clips", "add", "append", "media pool"]
+    },
+    {
+        "question": "How do I get all clips on a timeline track?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\ntimeline = project.GetCurrentTimeline()\nitems = timeline.GetItemListInTrack(\"video\", 1)\nfor item in items:\n    print(f\"Clip: {item.GetName()}, Start: {item.GetStart()}, End: {item.GetEnd()}\")",
+        "tags": ["timeline", "track", "clips", "items"]
+    },
+    {
+        "question": "How do I create a new project?",
+        "answer": "pm = resolve.GetProjectManager()\nproject = pm.CreateProject(\"My New Project\")\nif project:\n    print(f\"Created project: {project.GetName()}\")\nelse:\n    print(\"Project name already exists or creation failed\")",
+        "tags": ["project", "create", "project manager"]
+    },
+    {
+        "question": "How do I apply a LUT to a timeline item?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\ntimeline = project.GetCurrentTimeline()\nitems = timeline.GetItemListInTrack(\"video\", 1)\nif items:\n    item = items[0]\n    item.SetLUT(1, \"/path/to/my_lut.cube\")\n    print(f\"Applied LUT to {item.GetName()}\")",
+        "tags": ["color", "LUT", "grade", "timeline item"]
+    },
+    {
+        "question": "How do I get the available render formats?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nformats = project.GetRenderFormats()\nfor fmt, ext in formats.items():\n    print(f\"{fmt}: {ext}\")\n    codecs = project.GetRenderCodecs(fmt)\n    for desc, codec in codecs.items():\n        print(f\"  {desc}: {codec}\")",
+        "tags": ["render", "format", "codec", "deliver"]
+    },
+    {
+        "question": "How do I create a Fusion composition?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\ntimeline = project.GetCurrentTimeline()\nitems = timeline.GetItemListInTrack(\"video\", 1)\nif items:\n    item = items[0]\n    fusion_comp = item.GetFusionCompByIndex(1)\n    if fusion_comp:\n        print(\"Fusion comp found\")\n    else:\n        print(\"No Fusion comp on this clip\")",
+        "tags": ["fusion", "composition", "comp", "timeline item"]
+    },
+    {
+        "question": "How do I get the media pool folder structure?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nmedia_pool = project.GetMediaPool()\nroot = media_pool.GetRootFolder()\n\ndef print_folders(folder, indent=0):\n    print(\"  \" * indent + folder.GetName())\n    clips = folder.GetClipList()\n    if clips:\n        for clip in clips:\n            print(\"  \" * (indent+1) + f\"[clip] {clip.GetName()}\")\n    subfolders = folder.GetSubFolderList()\n    if subfolders:\n        for sf in subfolders:\n            print_folders(sf, indent+1)\n\nprint_folders(root)",
+        "tags": ["media pool", "folder", "structure", "browse"]
+    },
+    {
+        "question": "How do I set the timeline resolution?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\nproject.SetSetting(\"timelineResolutionWidth\", \"1920\")\nproject.SetSetting(\"timelineResolutionHeight\", \"1080\")\nprint(f\"Width: {project.GetSetting('timelineResolutionWidth')}\")\nprint(f\"Height: {project.GetSetting('timelineResolutionHeight')}\")",
+        "tags": ["project", "settings", "resolution", "timeline"]
+    },
+    {
+        "question": "How do I add a track to the timeline?",
+        "answer": "project = resolve.GetProjectManager().GetCurrentProject()\ntimeline = project.GetCurrentTimeline()\nresult = timeline.AddTrack(\"video\")\nprint(f\"Video tracks: {timeline.GetTrackCount('video')}\")\nprint(f\"Audio tracks: {timeline.GetTrackCount('audio')}\")",
+        "tags": ["timeline", "track", "add"]
+    }
+]
