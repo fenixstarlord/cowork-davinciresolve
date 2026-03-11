@@ -4,5 +4,10 @@
   "description": "Control DaVinci Resolve from Claude — execute API calls, create timelines, manage media, render projects. Requires Resolve to be running locally.",
   "author": {
     "name": "fenixstarlord"
+  },
+  "install_url": "https://github.com/fenixstarlord/resolvechat",
+  "setup": {
+    "command": "bash",
+    "args": ["setup.sh"]
   }
 }
