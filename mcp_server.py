@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["mcp"]
+# ///
 """
 DaVinci Resolve MCP Server — connects to Resolve and exposes tools for Claude Cowork.
 

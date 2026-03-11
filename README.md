@@ -4,43 +4,34 @@ Control DaVinci Resolve from Claude Desktop's Cowork mode. Execute API calls, cr
 
 ## Prerequisites
 
+- **[uv](https://docs.astral.sh/uv/)** — Python package runner (installs dependencies automatically)
 - **Python 3.10+**
 - **DaVinci Resolve** installed and running
 - **Claude Desktop** (with Cowork mode)
 
+If you don't have `uv`, install it:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
 ## Installation
 
-### 1. Clone and install dependencies
+### 1. Build the plugin zip
 
 ```bash
 git clone https://github.com/fenixstarlord/resolvechat.git
 cd resolvechat
-./setup.sh
-```
-
-Or manually:
-
-```bash
-pip install mcp
-```
-
-### 2. Build the plugin zip
-
-The plugin must be uploaded as a **zip file**. Run the package script to create it:
-
-```bash
 ./package.sh
 ```
 
-This creates `davinci-resolve.zip` in the project root.
+This creates `davinci-resolve.zip`. No other setup needed — `uv` auto-installs the `mcp` dependency on first run.
 
-Or manually:
-
-```bash
-zip -r davinci-resolve.zip .claude-plugin .mcp.json mcp_server.py CONNECTORS.md CLAUDE.md skills/ commands/ docs/ examples/ requirements.txt setup.sh
-```
-
-### 3. Upload to Claude Desktop
+### 2. Upload to Claude Desktop
 
 1. Open **Claude Desktop** and switch to **Cowork** mode
 2. Click **Add Plugin** > **Personal** > **+** (plus)
@@ -48,7 +39,7 @@ zip -r davinci-resolve.zip .claude-plugin .mcp.json mcp_server.py CONNECTORS.md 
 4. Upload the `davinci-resolve.zip` file
 5. The plugin appears in your personal plugin list
 
-### 4. Start using it
+### 3. Start using it
 
 1. Make sure **DaVinci Resolve** is running
 2. Start a new Cowork session with the plugin enabled
@@ -63,8 +54,8 @@ The plugin auto-detects the Resolve scripting modules path for your OS. If your 
   "mcpServers": {
     "davinci-resolve": {
       "type": "stdio",
-      "command": "python3",
-      "args": ["mcp_server.py"],
+      "command": "uv",
+      "args": ["run", "mcp_server.py"],
       "env": {
         "RESOLVE_SCRIPT_PATH": "/your/custom/path/to/Scripting/Modules"
       }
@@ -143,8 +134,8 @@ Full documentation is also available as MCP resources:
 - Set `RESOLVE_SCRIPT_PATH` in `.mcp.json` (see [Custom Resolve script path](#custom-resolve-script-path) above)
 
 ### MCP server not starting
+- Confirm `uv` is installed: `uv --version`
 - Confirm Python 3.10+ is available: `python3 --version`
-- Confirm the `mcp` package is installed: `pip show mcp`
 - Check stderr output — the server logs to stderr, not stdout
 
 ### Connection drops mid-session

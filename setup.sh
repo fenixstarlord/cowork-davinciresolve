@@ -4,19 +4,21 @@ set -e
 echo "=== DaVinci Resolve Cowork Plugin Setup ==="
 echo ""
 
-# Install Python dependencies
-echo "Installing dependencies..."
-pip install mcp
-echo ""
+# Check for uv
+if ! command -v uv &> /dev/null; then
+    echo "Installing uv (Python package runner)..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    echo ""
+fi
 
-echo "Setup complete!"
+echo "Setup complete! Dependencies install automatically on first use via uv."
 echo ""
-echo "To use this plugin in Claude Desktop:"
-echo "  1. Open Claude Desktop"
-echo "  2. Go to Settings > Plugins > Install from folder"
-echo "  3. Select this directory: $(pwd)"
+echo "Next steps:"
+echo "  1. Run ./package.sh to create the plugin zip"
+echo "  2. In Claude Desktop: Cowork > Add Plugin > Personal > + > Upload plugin"
+echo "  3. Upload davinci-resolve.zip"
 echo "  4. Ensure DaVinci Resolve is running"
-echo "  5. Switch to Cowork mode and start using the plugin"
+echo "  5. Start a Cowork session and go!"
 echo ""
 echo "Available slash commands:"
 echo "  /create-timelines  — Create timelines from media pool clips"
