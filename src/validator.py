@@ -26,23 +26,22 @@ class ValidationResult:
 
 
 class APIValidator:
-    """Validates generated code against a whitelist of known Resolve API methods."""
+    """Validates generated code against a whitelist of known Resolve API methods.
 
-    # Known Resolve objects that methods are called on
-    KNOWN_OBJECTS = {
-        "resolve", "project_manager", "project", "media_storage", "media_pool",
-        "media_pool_item", "folder", "timeline", "timeline_item", "gallery",
+    Only inspects calls made on known Resolve object variables. Standard Python
+    code (builtins, string methods, list ops, etc.) is never flagged.
+    """
+
+    # Variable names that are known to hold Resolve API objects.
+    # If a method is called on one of these, it must be in the whitelist.
+    RESOLVE_OBJECT_VARS = {
+        "resolve", "project_manager", "pm", "project", "media_storage",
+        "media_pool", "media_pool_item", "clip", "item", "folder",
+        "root_folder", "timeline", "timeline_item", "gallery",
         "gallery_still", "gallery_still_album", "color_group", "fusion",
-    }
-
-    # Built-in Python functions/methods that are always allowed
-    ALLOWED_BUILTINS = {
-        "print", "len", "range", "str", "int", "float", "list", "dict",
-        "tuple", "set", "bool", "type", "isinstance", "enumerate", "zip",
-        "sorted", "reversed", "min", "max", "sum", "abs", "round",
-        "append", "extend", "insert", "remove", "pop", "keys", "values",
-        "items", "get", "update", "format", "join", "split", "strip",
-        "replace", "lower", "upper", "startswith", "endswith",
+        "footage_folder", "timelines_folder", "current_folder",
+        "broadcast_timeline", "web_timeline", "comp", "fusion_comp",
+        "media_pool_folder",
     }
 
     def __init__(self, valid_methods: set[str]):
@@ -58,35 +57,21 @@ class APIValidator:
         """
         Validate generated code against the API whitelist.
 
-        Parses the code to extract method calls and checks each one against
-        the whitelist. Returns a ValidationResult.
+        Only checks method calls on known Resolve object variables.
+        Regular Python code is allowed through without validation.
         """
         invalid_calls = []
         warnings = []
 
-        # Try AST-based extraction first
         try:
-            calls = self._extract_calls_ast(code)
+            resolve_calls = self._extract_resolve_calls_ast(code)
         except SyntaxError:
-            calls = self._extract_calls_regex(code)
+            resolve_calls = self._extract_resolve_calls_regex(code)
             warnings.append("Code has syntax errors; used regex-based validation (less accurate).")
 
-        for call in calls:
-            method_name = call.split(".")[-1] if "." in call else call
-
-            # Skip known builtins
-            if method_name in self.ALLOWED_BUILTINS:
-                continue
-
-            # Skip Python dunder methods
-            if method_name.startswith("__") and method_name.endswith("__"):
-                continue
-
-            # Check against whitelist
+        for obj_var, method_name in resolve_calls:
             if method_name not in self._method_names_only:
-                # Check with object prefix
-                if call not in self.valid_methods:
-                    invalid_calls.append(call)
+                invalid_calls.append(f"{obj_var}.{method_name}")
 
         return ValidationResult(
             is_valid=len(invalid_calls) == 0,
@@ -94,46 +79,48 @@ class APIValidator:
             warnings=warnings,
         )
 
-    def _extract_calls_ast(self, code: str) -> list[str]:
-        """Extract method calls using Python AST parsing."""
+    def _extract_resolve_calls_ast(self, code: str) -> list[tuple[str, str]]:
+        """
+        Extract method calls on Resolve objects using AST parsing.
+
+        Returns list of (object_variable, method_name) tuples for calls made
+        on known Resolve object variables.
+        """
         tree = ast.parse(code)
         calls = []
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.Call):
-                call_name = self._get_call_name(node)
-                if call_name:
-                    calls.append(call_name)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                method_name = node.func.attr
+                # Get the root variable name of the call chain
+                root_var = self._get_root_var(node.func.value)
+                if root_var and root_var in self.RESOLVE_OBJECT_VARS:
+                    calls.append((root_var, method_name))
 
         return calls
 
     @staticmethod
-    def _get_call_name(node: ast.Call) -> str | None:
-        """Extract the full dotted name from a Call node."""
-        if isinstance(node.func, ast.Name):
-            return node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            parts = []
-            current = node.func
-            while isinstance(current, ast.Attribute):
-                parts.append(current.attr)
-                current = current.value
-            if isinstance(current, ast.Name):
-                parts.append(current.id)
-            parts.reverse()
-            return ".".join(parts)
+    def _get_root_var(node) -> str | None:
+        """Walk down the attribute chain to find the root variable name."""
+        current = node
+        while isinstance(current, ast.Attribute):
+            current = current.value
+        if isinstance(current, ast.Name):
+            return current.id
+        # Handle calls like resolve.GetProjectManager().GetCurrentProject()
+        if isinstance(current, ast.Call):
+            if isinstance(current.func, ast.Attribute):
+                return APIValidator._get_root_var(current.func.value)
+            if isinstance(current.func, ast.Name):
+                return current.func.id
         return None
 
-    @staticmethod
-    def _extract_calls_regex(code: str) -> list[str]:
-        """Fallback: extract method calls using regex."""
-        # Match patterns like obj.Method(...) or Method(...)
-        pattern = r"(?:(\w+)\.)?(\w+)\s*\("
+    def _extract_resolve_calls_regex(self, code: str) -> list[tuple[str, str]]:
+        """Fallback: extract Resolve API calls using regex."""
+        pattern = r"\b(\w+)\.(\w+)\s*\("
         matches = re.findall(pattern, code)
         calls = []
         for obj, method in matches:
-            if obj:
-                calls.append(f"{obj}.{method}")
-            else:
-                calls.append(method)
+            if obj in self.RESOLVE_OBJECT_VARS:
+                calls.append((obj, method))
         return calls
