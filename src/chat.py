@@ -5,6 +5,7 @@ Central coordinator for the chatbot pipeline.
 
 import json
 import os
+import re
 from pathlib import Path
 
 import anthropic
@@ -27,13 +28,16 @@ CRITICAL RULES:
 2. Never hallucinate API calls. If you're unsure whether a method exists, say so.
 3. When generating code, use the standard Resolve scripting setup: assume `resolve` is already available as the entry point object.
 4. Always explain what the code does before presenting it.
-5. If a task requires multiple steps, break it down clearly.
+5. If a task requires multiple steps, present the COMPLETE script in a single Python code block rather than one tool call at a time.
+6. Prefer generating complete Python scripts in code blocks over using individual tool calls. Tool calls are for simple single-method queries.
 
 When providing code, wrap it in a Python code block. The code should be ready to execute in Resolve's scripting console."""
 
 
 class ChatOrchestrator:
     """Central coordinator for the chatbot pipeline."""
+
+    MAX_TOOL_ROUNDS = 10  # Safety limit for agentic tool-use loops
 
     def __init__(
         self,
@@ -69,12 +73,10 @@ class ChatOrchestrator:
         scored = []
         for ex in self.examples:
             score = 0
-            # Score based on tag overlap with query words
             query_words = set(query_lower.split())
             for tag in ex.get("tags", []):
                 if tag.lower() in query_words or tag.lower() in query_lower:
                     score += 2
-            # Score based on question similarity (simple word overlap)
             ex_words = set(ex.get("question", "").lower().split())
             overlap = len(query_words & ex_words)
             score += overlap
@@ -160,11 +162,12 @@ class ChatOrchestrator:
         """
         Process a user message through the full pipeline.
 
-        Args:
-            user_input: The user's natural language input.
+        Implements an agentic loop: if the LLM returns tool calls, the results
+        are fed back so the LLM can continue its multi-step plan until it
+        produces a final text response.
 
         Returns:
-            Dict with 'response' (text), 'code' (if generated), 'sources' (doc refs).
+            Dict with 'response' (text), 'code' (if generated), 'validation', 'tool_calls'.
         """
         system, messages = self._build_messages(user_input)
 
@@ -173,70 +176,94 @@ class ChatOrchestrator:
         if self.tool_registry:
             tools = self.tool_registry.get_tool_definitions_for_llm()
 
-        # Call the LLM
-        kwargs = {
-            "model": "claude-sonnet-4-20250514",
-            "max_tokens": 4096,
-            "system": system,
-            "messages": messages,
-        }
-        if tools:
-            kwargs["tools"] = tools
+        all_text_parts = []
+        all_code_parts = []
+        all_tool_calls = []
 
-        response = self.client.messages.create(**kwargs)
+        for _round in range(self.MAX_TOOL_ROUNDS):
+            kwargs = {
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 4096,
+                "system": system,
+                "messages": messages,
+            }
+            if tools:
+                kwargs["tools"] = tools
 
-        # Process response
-        result = self._process_response(response)
+            response = self.client.messages.create(**kwargs)
 
-        # Update conversation history
-        self.conversation_history.append({"role": "user", "content": user_input})
-        self.conversation_history.append({"role": "assistant", "content": result["response"]})
+            # Collect text and tool_use blocks from this response
+            tool_use_blocks = []
+            assistant_content = []
 
-        return result
+            for block in response.content:
+                assistant_content.append(block)
+                if block.type == "text":
+                    all_text_parts.append(block.text)
+                    code_blocks = re.findall(r"```python\s*\n(.*?)```", block.text, re.DOTALL)
+                    all_code_parts.extend(code_blocks)
+                elif block.type == "tool_use":
+                    tool_use_blocks.append(block)
+                    all_tool_calls.append({
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.input,
+                    })
 
-    def _process_response(self, response) -> dict:
-        """Process the LLM response, extracting text and any tool calls."""
-        text_parts = []
-        code_parts = []
-        tool_calls = []
+            # If no tool calls, we're done — final text response
+            if not tool_use_blocks:
+                break
 
-        for block in response.content:
-            if block.type == "text":
-                text_parts.append(block.text)
-                # Extract code blocks from text
-                import re
-                code_blocks = re.findall(r"```python\s*\n(.*?)```", block.text, re.DOTALL)
-                code_parts.extend(code_blocks)
-            elif block.type == "tool_use":
-                tool_calls.append({
-                    "name": block.name,
-                    "input": block.input,
-                })
+            # Append the assistant message with tool_use blocks
+            messages.append({"role": "assistant", "content": assistant_content})
 
-        # If there were tool calls, generate code from them
-        if tool_calls and self.tool_registry:
-            for tc in tool_calls:
-                tool = self.tool_registry.get_tool_by_name(tc["name"])
+            # Build tool results and feed them back
+            tool_results = []
+            for block in tool_use_blocks:
+                tool = self.tool_registry.get_tool_by_name(block.name) if self.tool_registry else None
                 if tool:
-                    # Build executable code from tool call
+                    # Build the code that would be executed
                     code = tool["resolve_call"]
-                    for param_name, param_value in tc["input"].items():
+                    for param_name, param_value in block.input.items():
                         code = code.replace(f"{{{param_name}}}", repr(param_value))
-                    code_parts.append(code)
+                    all_code_parts.append(code)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": f"Tool call translated to code: `{code}`. This will be presented to the user for execution. Continue with your plan.",
+                    })
+                else:
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": f"Unknown tool: {block.name}. Please use a documented API method or provide a Python code block instead.",
+                        "is_error": True,
+                    })
 
-        full_response = "\n".join(text_parts)
-        full_code = "\n".join(code_parts) if code_parts else None
+            messages.append({"role": "user", "content": tool_results})
 
-        # Validate generated code if we have a validator
+            # If stop_reason is end_turn (not tool_use), we're done
+            if response.stop_reason != "tool_use":
+                break
+
+        # Assemble final result
+        full_response = "\n".join(all_text_parts)
+        full_code = "\n".join(all_code_parts) if all_code_parts else None
+
+        # Validate generated code
         validation = None
         if full_code and self.validator:
             validation = self.validator.validate(full_code)
+
+        # Update conversation history (store just the text summary)
+        self.conversation_history.append({"role": "user", "content": user_input})
+        self.conversation_history.append({"role": "assistant", "content": full_response})
 
         return {
             "response": full_response,
             "code": full_code,
             "validation": validation,
-            "tool_calls": tool_calls if tool_calls else None,
+            "tool_calls": all_tool_calls if all_tool_calls else None,
         }
 
     def get_sources(self, query: str) -> list[dict]:
