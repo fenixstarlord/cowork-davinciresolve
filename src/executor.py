@@ -1,12 +1,13 @@
 """
-Execute validated scripts in DaVinci Resolve's scripting environment.
+Execute individual API calls in DaVinci Resolve's scripting environment.
+Maintains a persistent namespace so results carry across calls within a session.
 """
 
 import io
 import sys
 import signal
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -17,6 +18,20 @@ class ExecutionResult:
     error: str = ""
     return_value: Any = None
 
+    def summary(self) -> str:
+        """Short human-readable summary of the result."""
+        if not self.success:
+            return f"Error: {self.error}"
+        parts = []
+        if self.output:
+            parts.append(self.output.strip())
+        if self.return_value is not None:
+            val = repr(self.return_value)
+            if len(val) > 500:
+                val = val[:500] + "..."
+            parts.append(val)
+        return "\n".join(parts) if parts else "OK (no output)"
+
 
 class ExecutionTimeout(Exception):
     pass
@@ -26,7 +41,7 @@ class ExecutionTimeout(Exception):
 def timeout(seconds: int):
     """Context manager that raises ExecutionTimeout after the given seconds."""
     def handler(signum, frame):
-        raise ExecutionTimeout(f"Script execution timed out after {seconds} seconds.")
+        raise ExecutionTimeout(f"Execution timed out after {seconds} seconds.")
 
     old_handler = signal.signal(signal.SIGALRM, handler)
     signal.alarm(seconds)
@@ -38,48 +53,45 @@ def timeout(seconds: int):
 
 
 class ResolveExecutor:
-    """Execute validated scripts in Resolve's scripting environment."""
+    """Execute API calls in Resolve with a persistent namespace across calls."""
 
     TIMEOUT_SECONDS = 30
 
     def __init__(self, resolve_instance):
         self.resolve = resolve_instance
+        # Persistent namespace — results from earlier calls are available to later ones
+        self.namespace: dict = {}
+        self._init_namespace()
 
-    def execute(self, code: str, namespace: dict = None) -> ExecutionResult:
-        """
-        Execute a validated Python script with access to the resolve object.
-
-        Args:
-            code: The Python code to execute.
-            namespace: Optional shared namespace dict. If provided, code executes
-                       in this namespace (allowing multi-step plans to share state).
-
-        Returns:
-            ExecutionResult with success status, output, errors, and return values.
-        """
-        if namespace is None:
-            namespace = {}
-
-        # Ensure resolve is available in the namespace
-        namespace.setdefault("resolve", self.resolve)
-
-        # Set up common convenience variables
+    def _init_namespace(self):
+        """Populate the namespace with the resolve entry point and common objects."""
+        self.namespace["resolve"] = self.resolve
         if self.resolve:
             try:
                 pm = self.resolve.GetProjectManager()
                 if pm:
-                    namespace.setdefault("project_manager", pm)
+                    self.namespace["project_manager"] = pm
                     project = pm.GetCurrentProject()
                     if project:
-                        namespace.setdefault("project", project)
-                        namespace.setdefault("media_pool", project.GetMediaPool())
+                        self.namespace["project"] = project
+                        self.namespace["media_pool"] = project.GetMediaPool()
                         timeline = project.GetCurrentTimeline()
                         if timeline:
-                            namespace.setdefault("timeline", timeline)
+                            self.namespace["timeline"] = timeline
             except Exception:
                 pass
 
-        # Capture stdout
+    def refresh_namespace(self):
+        """Re-populate common objects (call after state-changing operations)."""
+        self._init_namespace()
+
+    def execute(self, code: str) -> ExecutionResult:
+        """
+        Execute a code snippet in the persistent namespace.
+
+        Variables assigned in one call are available in subsequent calls,
+        enabling multi-step workflows.
+        """
         captured_output = io.StringIO()
         old_stdout = sys.stdout
 
@@ -87,29 +99,29 @@ class ResolveExecutor:
             sys.stdout = captured_output
 
             with timeout(self.TIMEOUT_SECONDS):
-                exec(code, namespace)
+                return_value = None
 
-            output = captured_output.getvalue()
+                # Try eval first (single expression) to capture return value
+                try:
+                    return_value = eval(code.strip(), self.namespace)
+                    self.namespace["_"] = return_value
+                except SyntaxError:
+                    # Not a single expression — use exec
+                    exec(code, self.namespace)
 
-            # Try to extract a meaningful return value from the last expression
-            return_value = None
-            lines = code.strip().split("\n")
-            if lines:
-                last_line = lines[-1].strip()
-                # If the last line is an expression (not assignment, not keyword statement)
-                if (last_line and
-                        "=" not in last_line and
-                        not last_line.startswith(("import ", "from ", "if ", "for ",
-                                                  "while ", "def ", "class ", "try:",
-                                                  "except", "finally:", "with ", "#"))):
-                    try:
-                        return_value = eval(last_line, namespace)
-                    except Exception:
-                        pass
+                    # Try to eval just the last line for a return value
+                    lines = code.strip().split("\n")
+                    last_line = lines[-1].strip()
+                    if last_line and not _is_statement(last_line):
+                        try:
+                            return_value = eval(last_line, self.namespace)
+                            self.namespace["_"] = return_value
+                        except Exception:
+                            pass
 
             return ExecutionResult(
                 success=True,
-                output=output,
+                output=captured_output.getvalue(),
                 return_value=return_value,
             )
 
@@ -127,3 +139,20 @@ class ResolveExecutor:
             )
         finally:
             sys.stdout = old_stdout
+
+
+def _is_statement(line: str) -> bool:
+    """Check if a line is a Python statement (not an expression)."""
+    line = line.strip()
+    if not line or line.startswith("#"):
+        return True
+    keywords = (
+        "import ", "from ", "if ", "for ", "while ", "def ", "class ",
+        "try:", "except", "finally:", "with ", "return ", "raise ",
+        "pass", "break", "continue", "del ", "assert ", "elif ", "else:",
+    )
+    if any(line.startswith(kw) for kw in keywords):
+        return True
+    if "=" in line and not line.startswith("=") and "==" not in line.split("=")[0]:
+        return True
+    return False

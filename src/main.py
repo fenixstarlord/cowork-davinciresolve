@@ -51,29 +51,6 @@ def _get_resolve():
         return None
 
 
-def _prompt_execute() -> str:
-    """
-    Prompt the user for execution choice.
-
-    Returns:
-        'y' = execute this one
-        'n' = skip
-        'a' = execute all remaining without asking
-    """
-    while True:
-        choice = console.input(
-            "Execute this in Resolve? [bold]([green]y[/green]es / [red]n[/red]o / [yellow]a[/yellow]ll)[/bold] "
-        ).strip().lower()
-        if choice in ("y", "yes"):
-            return "y"
-        elif choice in ("n", "no", ""):
-            return "n"
-        elif choice in ("a", "all"):
-            return "a"
-        else:
-            console.print("[dim]Please enter y, n, or a.[/dim]")
-
-
 @click.group(invoke_without_command=True)
 @click.pass_context
 def cli(ctx):
@@ -112,7 +89,8 @@ def _start_chat():
     from .session import Session
     from .tools import ToolRegistry
     from .validator import APIValidator
-    from .chat import ChatOrchestrator
+    from .executor import ResolveExecutor
+    from .chat import ChatOrchestrator, StepInfo
 
     # Connect to Resolve (optional)
     resolve = _get_resolve()
@@ -134,23 +112,52 @@ def _start_chat():
     valid_methods = tool_registry.get_valid_method_names()
     validator = APIValidator(valid_methods)
 
+    # Initialize executor (if Resolve is connected)
+    executor = ResolveExecutor(resolve) if resolve else None
+
+    # Step approval state — mutable container so the closure can modify it
+    approval_state = {"auto_execute": False}
+
+    def on_step(step: StepInfo) -> bool:
+        """Called before each tool execution. Returns True to execute."""
+        desc = step.description or step.tool_name
+        console.print(f"\n[bold yellow]> {desc}[/bold yellow]")
+        console.print(Syntax(step.code, "python", theme="monokai"))
+
+        if approval_state["auto_execute"]:
+            return True
+
+        choice = _prompt_execute()
+        if choice == "a":
+            approval_state["auto_execute"] = True
+            return True
+        elif choice == "y":
+            return True
+        else:
+            return False
+
+    def on_text(text: str):
+        """Called when the LLM produces text between tool calls."""
+        console.print(Markdown(text))
+
     # Initialize chat orchestrator
     chat = ChatOrchestrator(
         retriever=retriever,
         session=session,
         tool_registry=tool_registry,
         validator=validator,
+        executor=executor,
+        on_step=on_step,
     )
 
     # State
     plan_mode = False
-    auto_execute = False
 
     # Welcome message
     console.print()
     console.print(Panel(
-        "[bold blue]DaVinci Resolve Chatbot[/bold blue]\n"
-        "Ask questions about the Resolve scripting API or request automation scripts.\n\n"
+        "[bold blue]DaVinci Resolve Assistant[/bold blue]\n"
+        "I execute Resolve API calls step by step. Ask me to do anything.\n\n"
         "Commands: [bold]/quit[/bold], [bold]/refresh[/bold], [bold]/history[/bold], [bold]/plan[/bold]",
         title="Welcome",
     ))
@@ -169,8 +176,8 @@ def _start_chat():
         if not user_input:
             continue
 
-        # Reset auto-execute per message
-        auto_execute = False
+        # Reset auto-execute for each new message
+        approval_state["auto_execute"] = False
 
         # Handle commands
         cmd = user_input.lower()
@@ -179,6 +186,8 @@ def _start_chat():
             break
         elif cmd == "/refresh":
             session.refresh()
+            if executor:
+                executor.refresh_namespace()
             console.print(Panel(session.get_context_summary(), title="Session Refreshed"))
             continue
         elif cmd == "/history":
@@ -199,34 +208,48 @@ def _start_chat():
             if plan_mode:
                 console.print(
                     "[dim]The assistant will present a detailed plan and wait for "
-                    "your approval before generating executable code.[/dim]"
+                    "your approval before executing any API calls.[/dim]"
                 )
             continue
 
-        # In plan mode, prepend instruction to plan first
+        # In plan mode, instruct the LLM to plan first
         if plan_mode:
             augmented_input = (
                 f"{user_input}\n\n"
-                "[PLAN MODE] Present a detailed step-by-step plan for this task. "
-                "Do NOT generate executable code yet. Explain what each step will do, "
-                "which API methods will be used, and ask for my approval before proceeding. "
-                "Once I approve, generate the complete executable script."
+                "[PLAN MODE] First, present a detailed step-by-step plan of what you "
+                "will do. List each API call you intend to make and explain why. "
+                "Do NOT make any tool calls yet. After I approve the plan, I will "
+                "ask you to execute it."
             )
         else:
             augmented_input = user_input
 
         # Process message
         console.print()
-        with console.status("[bold blue]Thinking...[/bold blue]"):
-            try:
-                result = chat.chat(augmented_input)
-            except Exception as e:
-                console.print(f"[red]Error: {e}[/red]")
-                continue
+        try:
+            result = chat.chat(augmented_input, on_text=on_text)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Interrupted.[/yellow]")
+            continue
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+            continue
 
-        # Display response
-        console.print("[bold blue]Assistant:[/bold blue]")
-        console.print(Markdown(result["response"]))
+        # Show step results summary
+        steps = result.get("steps", [])
+        if steps:
+            console.print()
+            succeeded = sum(1 for s in steps if s.result and s.result.success)
+            skipped = sum(1 for s in steps if s.skipped)
+            failed = sum(1 for s in steps if s.result and not s.result.success)
+            parts = []
+            if succeeded:
+                parts.append(f"[green]{succeeded} succeeded[/green]")
+            if failed:
+                parts.append(f"[red]{failed} failed[/red]")
+            if skipped:
+                parts.append(f"[dim]{skipped} skipped[/dim]")
+            console.print(f"Steps: {', '.join(parts)}")
 
         # Display sources
         sources = chat.get_sources(user_input)
@@ -236,86 +259,28 @@ def _start_chat():
                 else s['object'] or s['source']
                 for s in sources[:3]
             )
-            console.print(f"\n[dim]Sources: {source_text}[/dim]")
-
-        # If code was generated, display and offer execution
-        if result.get("code"):
-            # Split code into individual blocks for step-by-step execution
-            code_blocks = _split_code_blocks(result["code"])
-
-            for i, block in enumerate(code_blocks, 1):
-                if len(code_blocks) > 1:
-                    console.print(f"\n[bold]Step {i}/{len(code_blocks)}:[/bold]")
-
-                console.print()
-                console.print(Syntax(block, "python", theme="monokai", line_numbers=True))
-
-                # Show validation result
-                if result.get("validation"):
-                    validation = result["validation"]
-                    if validation.is_valid:
-                        console.print("[green]Validation: All API calls are documented.[/green]")
-                    else:
-                        console.print(f"[red]Validation: {validation}[/red]")
-                        console.print("[yellow]Execution blocked due to unrecognized API calls.[/yellow]")
-                        break
-
-                # Offer execution
-                if session.state.is_connected:
-                    if auto_execute:
-                        should_execute = True
-                    else:
-                        choice = _prompt_execute()
-                        if choice == "a":
-                            auto_execute = True
-                            should_execute = True
-                        elif choice == "y":
-                            should_execute = True
-                        else:
-                            should_execute = False
-
-                    if should_execute:
-                        from .executor import ResolveExecutor
-                        executor = ResolveExecutor(resolve)
-                        exec_result = executor.execute(block)
-                        if exec_result.success:
-                            console.print("[green]Execution successful.[/green]")
-                            if exec_result.output:
-                                console.print(f"Output:\n{exec_result.output}")
-                            if exec_result.return_value is not None:
-                                console.print(f"Return: {exec_result.return_value}")
-                            session.update_after_action(user_input, exec_result)
-                        else:
-                            console.print(f"[red]Execution failed: {exec_result.error}[/red]")
-                            if not auto_execute:
-                                console.print("[yellow]Stopping execution.[/yellow]")
-                                break
-                    else:
-                        console.print("[dim]Skipped.[/dim]")
-                else:
-                    console.print("[dim](Resolve not connected — cannot execute)[/dim]")
-                    break
+            console.print(f"[dim]Sources: {source_text}[/dim]")
 
         console.print()
 
 
-def _split_code_blocks(code: str) -> list[str]:
+def _prompt_execute() -> str:
     """
-    Split a multi-step code string into individual executable blocks.
-    Splits on blank-line-separated sections that each form a logical step.
-    If the code is a single cohesive script, returns it as one block.
+    Prompt the user for execution choice.
+    Returns: 'y', 'n', or 'a' (execute all remaining).
     """
-    # If code has clear step comments (# Step 1, # Step 2, etc.), split on those
-    import re
-    step_pattern = re.compile(r"^# (?:Step \d+|---)", re.MULTILINE)
-    if step_pattern.search(code):
-        parts = step_pattern.split(code)
-        blocks = [p.strip() for p in parts if p.strip()]
-        if len(blocks) > 1:
-            return blocks
-
-    # Otherwise return as a single block
-    return [code.strip()]
+    while True:
+        choice = console.input(
+            "[bold]Execute? ([green]y[/green]es / [red]n[/red]o / [yellow]a[/yellow]ll)[/bold] "
+        ).strip().lower()
+        if choice in ("y", "yes"):
+            return "y"
+        elif choice in ("n", "no", ""):
+            return "n"
+        elif choice in ("a", "all"):
+            return "a"
+        else:
+            console.print("[dim]Please enter y, n, or a.[/dim]")
 
 
 if __name__ == "__main__":

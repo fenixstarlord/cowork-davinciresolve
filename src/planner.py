@@ -184,8 +184,6 @@ Return ONLY the JSON array, no other text."""
 
         executor = ResolveExecutor(session.resolve)
         completed = 0
-        # Build a shared namespace so steps can reference previous results
-        shared_namespace = {"resolve": session.resolve}
 
         for i, step in enumerate(steps):
             step.status = StepStatus.RUNNING
@@ -195,7 +193,7 @@ Return ONLY the JSON array, no other text."""
                 step.status = StepStatus.SKIPPED
                 continue
 
-            result = executor.execute(code, namespace=shared_namespace)
+            result = executor.execute(code)
 
             if result.success:
                 step.status = StepStatus.COMPLETED
