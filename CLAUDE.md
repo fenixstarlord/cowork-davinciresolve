@@ -24,7 +24,6 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 | `.mcp.json` | MCP connector config (stdio transport) |
 | `skills/` | Domain knowledge (API ref, Fusion guide, scripting patterns) |
 | `commands/` | Slash commands for common workflows |
-| `CONNECTORS.md` | Documents the `~~resolve` connector |
 | `docs/` | Raw API and Fusion documentation |
 | `examples/examples.json` | Few-shot examples |
 
