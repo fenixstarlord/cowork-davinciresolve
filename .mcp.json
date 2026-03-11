@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "davinci-resolve": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "mcp_server.py"],
+      "env": {}
+    }
+  }
+}

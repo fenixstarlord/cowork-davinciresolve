@@ -1,0 +1,8 @@
+{
+  "name": "davinci-resolve",
+  "version": "1.0.0",
+  "description": "Control DaVinci Resolve from Claude — execute API calls, create timelines, manage media, render projects. Requires Resolve to be running locally.",
+  "author": {
+    "name": "fenixstarlord"
+  }
+}
