@@ -12,6 +12,7 @@ zip -r davinci-resolve.zip \
     commands/ \
     docs/ \
     examples/ \
+    CONNECTORS.md \
     setup.sh \
     -x "*.pyc" "__pycache__/*" ".DS_Store"
 
