@@ -50,6 +50,16 @@ if ! command -v uv &> /dev/null; then
     echo ""
 fi
 
+# Resolve full path to uv — Claude Desktop launches with a minimal PATH
+# that won't include Homebrew, cargo, or other user-installed locations.
+UV_PATH="$(command -v uv)"
+if [ -z "$UV_PATH" ]; then
+    echo "ERROR: uv not found in PATH after install. Please install manually:"
+    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    exit 1
+fi
+echo "Found uv at: $UV_PATH"
+
 # Register MCP server in Claude Desktop config.
 # Cowork plugins run inside a sandboxed VM, which can't reach the local
 # Resolve scripting API. The MCP server must run natively on your Mac via
@@ -63,11 +73,12 @@ if [ ! -f "$DESKTOP_CONFIG" ]; then
 fi
 
 # Safely merge into the existing config (preserving other servers)
-python3 - "$DESKTOP_CONFIG" "$PLUGIN_DIR" <<'PYEOF'
+python3 - "$DESKTOP_CONFIG" "$PLUGIN_DIR" "$UV_PATH" <<'PYEOF'
 import json, sys
 
 config_path = sys.argv[1]
 plugin_dir = sys.argv[2]
+uv_path = sys.argv[3]
 
 with open(config_path, "r") as f:
     try:
@@ -79,7 +90,7 @@ if "mcpServers" not in config:
     config["mcpServers"] = {}
 
 config["mcpServers"]["davinci-resolve"] = {
-    "command": "uv",
+    "command": uv_path,
     "args": ["run", f"{plugin_dir}/mcp_server.py"]
 }
 
