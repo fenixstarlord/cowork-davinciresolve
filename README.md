@@ -149,7 +149,6 @@ resolvechat/
 ├── .claude-plugin/plugin.json    # Plugin manifest
 ├── .mcp.json                     # MCP server config (stdio)
 ├── mcp_server.py                 # MCP server — tools, resources, execution engine
-├── CONNECTORS.md                 # Connector documentation
 ├── skills/
 │   ├── resolve-api/SKILL.md      # Resolve API reference
 │   ├── fusion-scripting/SKILL.md # Fusion scripting guide
@@ -162,7 +161,6 @@ resolvechat/
 │   └── explore.md                # /explore
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
-├── requirements.txt              # Just: mcp
 ├── setup.sh                      # Install script
 ├── CLAUDE.md                     # Claude Code project context
 └── README.md
