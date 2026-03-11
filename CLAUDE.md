@@ -1,84 +1,60 @@
-# DaVinci Resolve RAG Chatbot
+# DaVinci Resolve — Claude Cowork Plugin
 
 ## Project Overview
 
-RAG-powered chatbot that answers questions and generates executable scripts for DaVinci Resolve, grounded in local Resolve API and Fusion scripting documentation.
-
-- Python 3.10+ CLI application
-- Anthropic Claude API for LLM (via `anthropic` SDK)
-- ChromaDB vector store with `sentence-transformers` embeddings (nomic-embed-text)
-- Hybrid retrieval: vector similarity + BM25 keyword search with Reciprocal Rank Fusion
-- CLI built with `click` and `rich`
+Claude Cowork plugin that connects to DaVinci Resolve via a local MCP server. Execute API calls, create timelines, manage media, and render projects — all from Claude Desktop's Cowork mode.
 
 ## Architecture
 
 ```
-User Query → Hybrid Retrieval (Vector + BM25) → Prompt Construction → Claude API → Validation → Response/Execution
+Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 ```
 
-### Core Modules (`src/`)
+- **MCP Server** (`mcp_server.py`): Python server using FastMCP SDK, stdio transport
+- **Skills**: Domain knowledge (API docs, Fusion guide, scripting patterns) loaded on-demand
+- **Commands**: Slash commands for common workflows (/create-timelines, /render, etc.)
+- **Resources**: Full API docs available at `resolve://api-docs`, `resolve://fusion-docs`, `resolve://examples`
 
-| Module | Purpose |
-|---|---|
-| `ingest.py` | Parse docs, chunk by object/method, embed, index into ChromaDB |
-| `retriever.py` | Hybrid search (vector + BM25) merged via RRF |
-| `tools.py` | Parse API docs into structured tool definitions for LLM function calling |
-| `validator.py` | Whitelist-based validation — blocks code with undocumented API calls |
-| `session.py` | Track Resolve environment state (project, timeline, media pool, page) |
-| `planner.py` | Multi-step task decomposition and sequential execution |
-| `chat.py` | LLM orchestration: prompt construction, response routing |
-| `executor.py` | Sandboxed script execution in Resolve's scripting console (30s timeout) |
-| `main.py` | CLI entrypoint with interactive chat loop |
+## Key Files
 
-### Key Files
+| File | Purpose |
+|------|---------|
+| `mcp_server.py` | MCP server — tools, resources, execution engine |
+| `.claude-plugin/plugin.json` | Plugin manifest |
+| `.mcp.json` | MCP connector config (stdio transport) |
+| `skills/` | Domain knowledge (API ref, Fusion guide, scripting patterns) |
+| `commands/` | Slash commands for common workflows |
+| `CONNECTORS.md` | Documents the `~~resolve` connector |
+| `docs/` | Raw API and Fusion documentation |
+| `examples/examples.json` | Few-shot examples |
 
-- `docs/` — Pre-cleaned Resolve API and Fusion scripting documentation (source of truth)
-- `examples/examples.json` — Few-shot example pairs for prompt injection
-- `vectorstore/` — Persisted ChromaDB embeddings (gitignored, rebuilt via `ingest`)
-- `main.py` (root) — Bootstrap script that creates venv, installs deps, builds index
+## MCP Tools
 
-## Setup & Run
+| Tool | Purpose |
+|------|---------|
+| `run_resolve_code` | Execute Python code in Resolve's scripting environment (persistent namespace) |
+| `get_project_info` | Read-only project status check |
+| `refresh_connection` | Re-connect to Resolve after project/timeline changes |
+
+## Setup
 
 ```bash
-# One command does everything (venv, deps, index, chat):
-python main.py
-
-# Or individual steps:
-python main.py ingest    # Rebuild vector index
-python main.py refresh   # Refresh Resolve session
+./setup.sh                    # Install deps (just: mcp)
+# Then add this folder as a plugin in Claude Desktop
 ```
-
-## Environment
-
-- Virtual environment: `.venv/` (auto-created by `main.py`)
-- Config: `.env` (copy from `.env.example`, set `ANTHROPIC_API_KEY`)
-- Embedding model: `nomic-ai/nomic-embed-text-v1.5`
 
 ## Coding Standards
 
-- Type hints on all public functions
-- No hallucinated API calls — if docs don't cover it, say so
-- Validate all generated code against the method whitelist before execution
-- Keep chunks at 300-600 tokens, never split mid-method
-- The `resolve` object is the entry point; assume it exists in execution context
-
-## Testing
-
-```bash
-# Activate venv first
-source .venv/bin/activate
-
-# Test ingestion
-python -m src.ingest
-
-# Test retrieval
-python -c "from src.retriever import HybridRetriever; r = HybridRetriever(); print(r.retrieve('get current timeline'))"
-```
+- **Never print to stdout** in the MCP server — use stderr for logging
+- Pre-loaded namespace: `resolve`, `project_manager`, `project`, `media_pool`, `timeline`
+- Validate generated code against API method whitelist before execution
+- No hallucinated API calls — use docs in `docs/` as source of truth
+- 1-based indexing for timelines, tracks, and node indices
+- Check for None before iterating (GetClipList, GetSubFolderList)
 
 ## Important Constraints
 
-- **No internet lookups** for API info — only use local docs in `docs/`
-- **No fine-tuning** — pure RAG
-- **CLI only** in v1 (Streamlit UI is future work)
-- **Resolve must be running** for execution/session features; chat works offline
-- **Always require user confirmation** before executing generated code
+- **Resolve must be running** for tools to work
+- **stdio transport** — server communicates via stdin/stdout (no network)
+- **Persistent namespace** — variables carry across `run_resolve_code` calls within a session
+- **30-second timeout** on code execution

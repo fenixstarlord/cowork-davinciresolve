@@ -1,8 +1,1 @@
-anthropic
-chromadb
-sentence-transformers
-einops
-rank_bm25
-click
-rich
-python-dotenv
+mcp
