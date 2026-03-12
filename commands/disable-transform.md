@@ -20,8 +20,9 @@ Reset all transform properties on every clip in the **active timeline** to their
 2. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
    - Skip any clip where `GetProperty()` returns `None` (transitions like Cross Dissolve, Smooth Cut)
    - For each media clip, read current transform + scaling values via `GetProperty()`
-   - Store original values as JSON in a Purple marker's `customData` field (marker name: `"TransformBackup"`, placed at frame 1 of the clip)
-   - If a `TransformBackup` marker already exists on a clip, skip backing up that clip (it was already processed) and warn the user
+   - Get the clip's source start frame via `GetSourceStartFrame()` — this is the in-point in the source media and is unique per timeline instance even when the same media pool clip is used multiple times
+   - Store original values as JSON in a Purple marker's `customData` field (marker name: `"TransformBackup"`, placed at the source start frame of the clip)
+   - If a `TransformBackup` marker already exists at that source start frame, skip backing up that clip (it was already processed) and warn the user
    - Reset transform properties to defaults: Pan=0, Tilt=0, ZoomX=1, ZoomY=1, ZoomGang=True, RotationAngle=0, AnchorPointX=0, AnchorPointY=0, Pitch=0, Yaw=0, FlipX=False, FlipY=False
    - Set Scaling to `resolve.SCALE_FIT`
 3. Report how many clips were modified, how many were skipped (already processed), and how many transitions were ignored
@@ -33,7 +34,7 @@ Reset all transform properties on every clip in the **active timeline** to their
 ## Notes
 - Transform properties: Pan, Tilt, ZoomX, ZoomY, ZoomGang, RotationAngle, AnchorPointX, AnchorPointY, Pitch, Yaw, FlipX, FlipY
 - Scaling uses named constants from the `resolve` object: `resolve.SCALE_USE_PROJECT`, `resolve.SCALE_CROP`, `resolve.SCALE_FIT`, `resolve.SCALE_FILL`, `resolve.SCALE_STRETCH`
-- Backup is stored per-clip via `AddMarker(1, "Purple", "TransformBackup", "", 1, json_data)`
+- Backup is stored per timeline instance via `AddMarker(source_start_frame, "Purple", "TransformBackup", "", 1, json_data)` where `source_start_frame = clip.GetSourceStartFrame()`
 - Use `GetMarkerByCustomData()` to check for existing backups — the customData must be a unique search key, so prefix the JSON with `"TransformBackup:"` for reliable lookup
 - Iterate tracks with `timeline.GetTrackCount("video")` and `timeline.GetItemListInTrack("video", idx)` (1-based indexing)
 - Always check if `GetItemListInTrack()` returns None before iterating

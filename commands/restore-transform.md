@@ -19,7 +19,8 @@ Restore original transform and scaling values on clips in the **active timeline*
 1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be restored
 2. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
    - Skip any clip where `GetProperty()` returns `None` (transitions)
-   - For each media clip, look for a marker named `"TransformBackup"` by scanning markers for the backup data prefix
+   - Get the clip's source start frame via `GetSourceStartFrame()` to identify the correct backup marker for this timeline instance
+   - Look for a `"TransformBackup"` marker at that source start frame by scanning markers for the backup data prefix
    - Parse the stored JSON to recover original property values
    - Restore each transform property and Scaling via `SetProperty()`
    - Delete the backup marker after successful restore
