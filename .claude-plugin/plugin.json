@@ -43,7 +43,7 @@
     },
     {
       "name": "render",
-      "description": "Set up and start render jobs for the current timeline or project",
+      "description": "Set up and start render jobs for the active timeline",
       "prompt_file": "../commands/render.md"
     }
   ]
