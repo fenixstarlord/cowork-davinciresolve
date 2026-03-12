@@ -5,46 +5,5 @@
   "author": {
     "name": "fenixstarlord"
   },
-  "install_url": "https://github.com/fenixstarlord/resolvechat",
-  "setup": {
-    "command": "bash",
-    "args": ["setup.sh"]
-  },
-  "commands": [
-    {
-      "name": "disable-transform",
-      "description": "Reset transforms on active timeline clips and set scaling to Scale to Fit",
-      "prompt_file": "../commands/disable-transform.md"
-    },
-    {
-      "name": "restore-transform",
-      "description": "Restore previously backed-up transform values on active timeline clips",
-      "prompt_file": "../commands/restore-transform.md"
-    },
-    {
-      "name": "create-timelines",
-      "description": "Create timelines from media pool clips with naming conventions",
-      "prompt_file": "../commands/create-timelines.md"
-    },
-    {
-      "name": "explore",
-      "description": "Browse and inspect the media pool, timelines, and project structure",
-      "prompt_file": "../commands/explore.md"
-    },
-    {
-      "name": "import-media",
-      "description": "Import media files into the media pool",
-      "prompt_file": "../commands/import-media.md"
-    },
-    {
-      "name": "project-info",
-      "description": "Show current project status — timelines, media pool, render queue",
-      "prompt_file": "../commands/project-info.md"
-    },
-    {
-      "name": "render",
-      "description": "Set up and start render jobs for the active timeline",
-      "prompt_file": "../commands/render.md"
-    }
-  ]
+  "repository": "https://github.com/fenixstarlord/resolvechat"
 }
