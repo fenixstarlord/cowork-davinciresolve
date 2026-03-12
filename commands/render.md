@@ -1,5 +1,5 @@
 ---
-description: Set up and start render jobs for the current timeline or project
+description: Set up and start render jobs for the active timeline
 argument-hint: "<format, codec, and output path>"
 ---
 
@@ -7,13 +7,13 @@ argument-hint: "<format, codec, and output path>"
 
 > If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
 
-Set up render settings and start render jobs.
+Set up render settings and start render jobs for the **active timeline** unless the user specifies otherwise.
 
 ## Usage
 /render $ARGUMENTS
 
 ## How It Works
-1. Use ~~resolve to check the current project and timeline
+1. Use ~~resolve to check the current project and active timeline — tell the user which timeline will be rendered
 2. Configure render settings (format, codec, resolution, output path)
 3. Add render job(s) to the queue
 4. Optionally start rendering

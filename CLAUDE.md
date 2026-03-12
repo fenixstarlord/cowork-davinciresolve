@@ -53,6 +53,7 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 
 ## Important Constraints
 
+- **Active timeline only** — all commands operate on the currently active timeline unless the user explicitly specifies otherwise. Never modify clips in other timelines without being asked.
 - **Resolve must be running** for tools to work
 - **stdio transport** — server communicates via stdin/stdout (no network)
 - **Persistent namespace** — variables carry across `run_resolve_code` calls within a session
