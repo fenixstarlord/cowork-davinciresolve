@@ -28,7 +28,7 @@ Restore original transform and scaling values on clips in the **active timeline*
 
 ## Examples
 - `/transform-enable`
-- First run `/disable-transform`, then `/transform-enable` to undo
+- First run `/transform-disable`, then `/transform-enable` to undo
 
 ## Notes
 - Reads backup from markers created by `/transform-disable` — marker color "Purple", name "TransformBackup"
