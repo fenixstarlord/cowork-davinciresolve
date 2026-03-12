@@ -4,16 +4,16 @@ argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
-# /restore-transform
+# /transform-enable
 
 > If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
 
-Restore original transform and scaling values on clips in the **active timeline** that were previously modified by `/disable-transform`. Reads backup data from Purple clip markers and removes them after restoring.
+Restore original transform and scaling values on clips in the **active timeline** that were previously modified by `/transform-disable`. Reads backup data from Purple clip markers and removes them after restoring.
 
 **Important:** This command only affects the currently active timeline. It does NOT modify clips in other timelines.
 
 ## Usage
-/restore-transform
+/transform-enable
 
 ## How It Works
 1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be restored
@@ -27,11 +27,11 @@ Restore original transform and scaling values on clips in the **active timeline*
 3. Report how many clips were restored, how many had no backup, and how many transitions were ignored
 
 ## Examples
-- `/restore-transform`
-- First run `/disable-transform`, then `/restore-transform` to undo
+- `/transform-enable`
+- First run `/disable-transform`, then `/transform-enable` to undo
 
 ## Notes
-- Reads backup from markers created by `/disable-transform` — marker color "Purple", name "TransformBackup"
+- Reads backup from markers created by `/transform-disable` — marker color "Purple", name "TransformBackup"
 - Properties restored: Pan, Tilt, ZoomX, ZoomY, ZoomGang, RotationAngle, AnchorPointX, AnchorPointY, Pitch, Yaw, FlipX, FlipY, Scaling
 - The customData field is prefixed with `"TransformBackup:"` followed by JSON
 - Use `GetMarkers()` to scan all markers on a clip — returns a dict keyed by frame ID

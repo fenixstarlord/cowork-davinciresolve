@@ -4,16 +4,16 @@ argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
-# /disable-transform
+# /transform-disable
 
 > If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
 
-Reset all transform properties on every clip in the **active timeline** to their defaults and set scaling to "Scale to Fit". Original values are backed up in clip markers so they can be restored later with `/restore-transform`.
+Reset all transform properties on every clip in the **active timeline** to their defaults and set scaling to "Scale to Fit". Original values are backed up in clip markers so they can be restored later with `/transform-enable`.
 
 **Important:** This command only affects the currently active timeline. It does NOT modify clips in other timelines.
 
 ## Usage
-/disable-transform
+/transform-disable
 
 ## How It Works
 1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be affected
@@ -28,12 +28,12 @@ Reset all transform properties on every clip in the **active timeline** to their
 3. Report how many clips were modified, how many were skipped (already processed), and how many transitions were ignored
 
 ## Examples
-- `/disable-transform`
-- `/disable-transform` — then later `/restore-transform` to undo
+- `/transform-disable`
+- `/transform-disable` — then later `/transform-enable` to undo
 
 ## Notes
 - Properties to back up and reset: Pan, Tilt, ZoomX, ZoomY, ZoomGang, RotationAngle, AnchorPointX, AnchorPointY, Pitch, Yaw, FlipX, FlipY, Scaling
-- Scaling uses named constants from the `resolve` object: `resolve.SCALE_USE_PROJECT`, `resolve.SCALE_CROP`, `resolve.SCALE_FIT`, `resolve.SCALE_FILL`, `resolve.SCALE_STRETCH`
+- Scaling uses named constants from the `resolve` object: `resolve.SCALE_USE_PROJECT`, `resolve.SCALE_CROP`, `resolve.SCALE_FIT`, `resolve.SCALE_FILL`, `resolve.SCALE_STRETCH`. This command sets Scaling to `resolve.SCALE_FIT`
 - Backup is stored per timeline instance via `AddMarker(source_start_frame, "Purple", "TransformBackup", "", 1, json_data)` where `source_start_frame = clip.GetSourceStartFrame()`
 - Use `GetMarkerByCustomData()` to check for existing backups — the customData must be a unique search key, so prefix the JSON with `"TransformBackup:"` for reliable lookup
 - Iterate tracks with `timeline.GetTrackCount("video")` and `timeline.GetItemListInTrack("video", idx)` (1-based indexing)
