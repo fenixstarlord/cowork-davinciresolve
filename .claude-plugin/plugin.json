@@ -13,12 +13,12 @@
   "commands": [
     {
       "name": "disable-transform",
-      "description": "Reset transforms on all timeline clips and set scaling to Scale to Fit",
+      "description": "Reset transforms on active timeline clips and set scaling to Scale to Fit",
       "prompt_file": "../commands/disable-transform.md"
     },
     {
       "name": "restore-transform",
-      "description": "Restore previously backed-up transform values on all timeline clips",
+      "description": "Restore previously backed-up transform values on active timeline clips",
       "prompt_file": "../commands/restore-transform.md"
     },
     {
