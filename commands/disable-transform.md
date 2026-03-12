@@ -16,7 +16,7 @@ Reset all transform properties on every clip in the **active timeline** to their
 /disable-transform
 
 ## How It Works
-1. Use `get_project_info` to confirm the active timeline — tell the user which timeline will be affected and wait for confirmation before proceeding
+1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be affected
 2. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
    - Skip any clip where `GetProperty()` returns `None` (transitions like Cross Dissolve, Smooth Cut)
    - For each media clip, read current transform + scaling values via `GetProperty()`
