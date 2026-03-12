@@ -1,6 +1,7 @@
 ---
 description: Set up and start render jobs for the active timeline
 argument-hint: "<format, codec, and output path>"
+allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /render

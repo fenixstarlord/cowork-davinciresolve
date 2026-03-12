@@ -1,6 +1,7 @@
 ---
 description: Show current project status — timelines, media pool, render queue
 argument-hint: ""
+allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /project-info

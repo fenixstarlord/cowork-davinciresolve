@@ -1,6 +1,7 @@
 ---
 description: Reset transforms on active timeline clips and set scaling to Scale to Fit
 argument-hint: ""
+allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /disable-transform
