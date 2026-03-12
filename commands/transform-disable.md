@@ -33,7 +33,7 @@ Reset all transform properties on every clip in the **active timeline** to their
 
 ## Notes
 - Properties to back up and reset: Pan, Tilt, ZoomX, ZoomY, ZoomGang, RotationAngle, AnchorPointX, AnchorPointY, Pitch, Yaw, FlipX, FlipY, Scaling
-- Scaling uses named constants from the `resolve` object: `resolve.SCALE_USE_PROJECT`, `resolve.SCALE_CROP`, `resolve.SCALE_FIT`, `resolve.SCALE_FILL`, `resolve.SCALE_STRETCH`
+- Scaling uses named constants from the `resolve` object: `resolve.SCALE_USE_PROJECT`, `resolve.SCALE_CROP`, `resolve.SCALE_FIT`, `resolve.SCALE_FILL`, `resolve.SCALE_STRETCH`. This command sets Scaling to `resolve.SCALE_FIT`
 - Backup is stored per timeline instance via `AddMarker(source_start_frame, "Purple", "TransformBackup", "", 1, json_data)` where `source_start_frame = clip.GetSourceStartFrame()`
 - Use `GetMarkerByCustomData()` to check for existing backups — the customData must be a unique search key, so prefix the JSON with `"TransformBackup:"` for reliable lookup
 - Iterate tracks with `timeline.GetTrackCount("video")` and `timeline.GetItemListInTrack("video", idx)` (1-based indexing)
