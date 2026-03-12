@@ -1,6 +1,7 @@
 ---
 description: Browse and inspect the media pool, timelines, and project structure
 argument-hint: "<what to explore>"
+allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /explore

@@ -1,6 +1,7 @@
 ---
 description: Create timelines from media pool clips with naming conventions
 argument-hint: "<naming pattern and folder>"
+allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /create-timelines
