@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "description": "Control DaVinci Resolve from Claude — execute API calls, create timelines, manage media, render projects. Requires Resolve to be running locally.",
   "author": {
-    "name": "fenixstarlord"
+    "name": "fenixstarlord",
+    "url": "https://github.com/fenixstarlord"
   },
-  "repository": "https://github.com/fenixstarlord/cowork-davinciresolve"
+  "repository": "https://github.com/fenixstarlord/cowork-davinciresolve",
+  "license": "MIT",
+  "keywords": ["davinci-resolve", "video-editing", "color-grading", "fusion", "media-management", "rendering", "timeline"]
 }
