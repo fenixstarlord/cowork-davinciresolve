@@ -16,7 +16,9 @@ import os
 import platform
 import re
 import signal
+import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -66,6 +68,43 @@ def _connect_resolve():
     except Exception as e:
         log(f"Error connecting to Resolve: {e}")
         return None
+
+
+def _launch_resolve():
+    """Launch DaVinci Resolve and wait up to 60 seconds for it to become available."""
+    system = platform.system()
+    try:
+        if system == "Darwin":
+            subprocess.Popen(["open", "-a", "DaVinci Resolve"])
+        elif system == "Windows":
+            resolve_exe = os.path.join(
+                os.environ.get("PROGRAMFILES", r"C:\Program Files"),
+                r"Blackmagic Design\DaVinci Resolve\Resolve.exe",
+            )
+            if os.path.exists(resolve_exe):
+                subprocess.Popen([resolve_exe])
+            else:
+                log(f"Resolve executable not found at {resolve_exe}")
+                return None
+        else:
+            resolve_bin = "/opt/resolve/bin/resolve"
+            if os.path.exists(resolve_bin):
+                subprocess.Popen([resolve_bin])
+            else:
+                log(f"Resolve executable not found at {resolve_bin}")
+                return None
+    except Exception as e:
+        log(f"Failed to launch Resolve: {e}")
+        return None
+
+    log("Launched DaVinci Resolve, waiting for it to become available...")
+    for _ in range(30):
+        time.sleep(2)
+        resolve = _connect_resolve()
+        if resolve:
+            return resolve
+    log("Timed out waiting for Resolve to start.")
+    return None
 
 
 # ── Execution Engine (from src/executor.py) ──────────────────────────────────
@@ -149,6 +188,37 @@ def _extract_resolve_calls(code: str) -> list[tuple[str, str]]:
     return calls
 
 
+# ── Namespace Helpers ────────────────────────────────────────────────────────
+
+def _ser(obj):
+    """Recursively convert Resolve API objects to JSON-safe values."""
+    if obj is None:
+        return None
+    if isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, dict):
+        return {k: _ser(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_ser(v) for v in obj]
+    return str(obj)
+
+
+def _navigate_folder(media_pool, path):
+    """Navigate to a media pool folder by path string like 'Master/Subfolder/Clips'."""
+    folder = media_pool.GetRootFolder()
+    if not path or path == "/":
+        return folder
+    for part in path.strip("/").split("/"):
+        subfolders = folder.GetSubFolderList()
+        if not subfolders:
+            return None
+        match = next((sf for sf in subfolders if sf.GetName() == part), None)
+        if match is None:
+            return None
+        folder = match
+    return folder
+
+
 # ── Persistent Namespace ─────────────────────────────────────────────────────
 
 _namespace: dict = {}
@@ -161,6 +231,8 @@ def _init_namespace():
     _namespace.clear()
     _resolve = _connect_resolve()
     _namespace["resolve"] = _resolve
+    _namespace["ser"] = _ser
+    _namespace["navigate_folder"] = _navigate_folder
 
     if _resolve:
         try:
@@ -176,6 +248,24 @@ def _init_namespace():
                         _namespace["timeline"] = tl
         except Exception as e:
             log(f"Warning: Could not fully populate namespace: {e}")
+
+
+def _ensure_connected():
+    """Lazy connection: connect (and auto-launch if needed) on first tool call."""
+    global _resolve
+    if _resolve:
+        return True
+    _init_namespace()
+    if _resolve:
+        return True
+    # Resolve not running — try to launch it
+    log("Resolve not running, attempting to launch...")
+    _resolve = _launch_resolve()
+    if _resolve:
+        _namespace["resolve"] = _resolve
+        _init_namespace()
+        return True
+    return False
 
 
 def _refresh_namespace():
@@ -207,6 +297,29 @@ def _load_valid_methods() -> set[str]:
 _valid_methods: set[str] = set()
 
 
+# ── Response Formatting ──────────────────────────────────────────────────────
+
+def _ok(description="", output="", return_value=None):
+    """Build a standardized success response."""
+    parts = []
+    if description:
+        parts.append(f"[{description}]")
+    parts.append("OK")
+    if output:
+        parts.append(f"Output:\n{output}")
+    if return_value is not None:
+        val = repr(return_value)
+        if len(val) > 1000:
+            val = val[:1000] + "..."
+        parts.append(f"Return value: {val}")
+    return "\n".join(parts)
+
+
+def _err(msg):
+    """Build a standardized error response."""
+    return f"ERROR: {msg}"
+
+
 # ── MCP Server Definition ───────────────────────────────────────────────────
 
 mcp = FastMCP("DaVinci Resolve")
@@ -226,8 +339,8 @@ def run_resolve_code(code: str, description: str = "") -> str:
         code: Python code to execute in the Resolve scripting environment.
         description: Optional brief description of what the code does.
     """
-    if not _resolve:
-        return "ERROR: Not connected to DaVinci Resolve. Call refresh_connection first, or ensure Resolve is running."
+    if not _ensure_connected():
+        return _err("Not connected to DaVinci Resolve. Ensure Resolve is installed and try again.")
 
     # Validate against API whitelist
     if _valid_methods:
@@ -264,24 +377,13 @@ def run_resolve_code(code: str, description: str = "") -> str:
                     except Exception:
                         pass
 
-        output = captured.getvalue()
-        parts = []
-        if description:
-            parts.append(f"[{description}]")
-        parts.append("OK")
-        if output.strip():
-            parts.append(f"Output:\n{output.strip()}")
-        if return_value is not None:
-            val = repr(return_value)
-            if len(val) > 1000:
-                val = val[:1000] + "..."
-            parts.append(f"Return value: {val}")
-        return "\n".join(parts)
+        output = captured.getvalue().strip()
+        return _ok(description=description, output=output, return_value=return_value)
 
     except ExecutionTimeout as e:
         return f"TIMEOUT: {e}"
     except Exception as e:
-        return f"ERROR: {type(e).__name__}: {e}"
+        return _err(f"{type(e).__name__}: {e}")
     finally:
         sys.stdout = old_stdout
 
@@ -292,8 +394,8 @@ def get_project_info() -> str:
 
     Quick read-only status check — no arguments needed.
     """
-    if not _resolve:
-        return "ERROR: Not connected to DaVinci Resolve. Ensure Resolve is running and call refresh_connection."
+    if not _ensure_connected():
+        return _err("Not connected to DaVinci Resolve. Ensure Resolve is installed and try again.")
 
     info = {}
     try:
@@ -361,7 +463,7 @@ def refresh_connection() -> str:
         except Exception:
             pass
         return f"Reconnected to Resolve. Current project: {project_name or '(none)'}"
-    return "Could not connect to DaVinci Resolve. Ensure Resolve is running."
+    return _err("Could not connect to DaVinci Resolve. Ensure Resolve is running.")
 
 
 # ── Resources ────────────────────────────────────────────────────────────────
@@ -401,5 +503,4 @@ def get_examples() -> str:
 if __name__ == "__main__":
     log("Starting DaVinci Resolve MCP server...")
     _valid_methods = _load_valid_methods()
-    _init_namespace()
     mcp.run()
