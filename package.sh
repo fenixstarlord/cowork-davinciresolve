@@ -3,10 +3,17 @@ set -e
 
 echo "Packaging DaVinci Resolve Cowork plugin..."
 
+# Sync VERSION → plugin.json
+VERSION=$(cat VERSION)
+TMPFILE=$(mktemp)
+jq --arg v "$VERSION" '.version = $v' .claude-plugin/plugin.json > "$TMPFILE" && mv "$TMPFILE" .claude-plugin/plugin.json
+echo "Version: $VERSION"
+
 zip -r davinci-resolve.zip \
     .claude-plugin \
     .mcp.json \
     mcp_server.py \
+    VERSION \
     CLAUDE.md \
     skills/ \
     commands/ \

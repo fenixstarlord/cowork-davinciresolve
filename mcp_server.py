@@ -24,6 +24,8 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+__version__ = (Path(__file__).parent / "VERSION").read_text().strip()
+
 # ── Logging to stderr (stdout is reserved for MCP protocol) ──────────────────
 
 def log(msg: str):
@@ -322,7 +324,7 @@ def _err(msg):
 
 # ── MCP Server Definition ───────────────────────────────────────────────────
 
-mcp = FastMCP("DaVinci Resolve")
+mcp = FastMCP("DaVinci Resolve", version=__version__)
 
 TIMEOUT_SECONDS = 30
 
