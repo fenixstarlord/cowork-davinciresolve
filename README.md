@@ -24,8 +24,8 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ### 1. Build the plugin zip
 
 ```bash
-git clone https://github.com/fenixstarlord/resolvechat.git
-cd resolvechat
+git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
+cd cowork-davinciresolve
 ./package.sh
 ```
 
@@ -145,7 +145,7 @@ Full documentation is also available as MCP resources:
 ## Project Structure
 
 ```
-resolvechat/
+cowork-davinciresolve/
 ├── .claude-plugin/plugin.json    # Plugin manifest
 ├── .mcp.json                     # MCP server config (stdio)
 ├── mcp_server.py                 # MCP server — tools, resources, execution engine
