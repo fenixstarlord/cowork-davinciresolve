@@ -1,6 +1,8 @@
 ---
 name: resolve-scripting-guide
 description: Best practices and common patterns for DaVinci Resolve scripting. Trigger when generating code, planning automation tasks, or debugging Resolve scripts.
+user-invocable: false
+allowed-tools: Read, Grep, Glob, mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # Resolve Scripting Guide

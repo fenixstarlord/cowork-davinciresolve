@@ -1,6 +1,8 @@
 ---
 name: fusion-scripting
 description: Fusion scripting guide for DaVinci Resolve's Fusion page. Trigger when the user asks about Fusion compositions, nodes, scripting in Fusion, or visual effects automation.
+user-invocable: false
+allowed-tools: Read, Grep, Glob, mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # Fusion Scripting Guide
