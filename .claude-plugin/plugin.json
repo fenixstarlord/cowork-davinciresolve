@@ -5,5 +5,8 @@
   "author": {
     "name": "fenixstarlord"
   },
-  "repository": "https://github.com/fenixstarlord/cowork-davinciresolve"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fenixstarlord/cowork-davinciresolve.git"
+  }
 }
