@@ -21,6 +21,8 @@ zip -r davinci-resolve.zip \
     examples/ \
     CONNECTORS.md \
     setup.sh \
+    setup.ps1 \
+    package.ps1 \
     -x "*.pyc" "__pycache__/*" ".DS_Store"
 
 echo ""
