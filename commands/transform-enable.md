@@ -1,6 +1,5 @@
 ---
 description: Restore previously backed-up transform values on active timeline clips
-disable-model-invocation: true
 argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
