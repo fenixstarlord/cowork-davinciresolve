@@ -6,11 +6,14 @@ This plugin uses a local MCP server (`mcp_server.py`) to bridge Claude and DaVin
 
 **Transport:** stdio
 
-### Why setup.sh is required
+### Why setup.sh / setup.ps1 is required
 
-Cowork runs plugins inside a sandboxed Linux VM. The MCP server needs direct access to DaVinci Resolve's scripting API on your Mac — it can't reach Resolve from inside the sandbox.
+Cowork runs plugins inside a sandboxed Linux VM. The MCP server needs direct access to DaVinci Resolve's scripting API on your machine — it can't reach Resolve from inside the sandbox.
 
-Running `./setup.sh` registers the MCP server in Claude Desktop's **native** config (`~/Library/Application Support/Claude/claude_desktop_config.json`), so it launches on your Mac alongside Claude Desktop — outside the sandbox, where it can talk to Resolve.
+Running `./setup.sh` (macOS/Linux) or `.\setup.ps1` (Windows) registers the MCP server in Claude Desktop's **native** config, so it launches on your machine alongside Claude Desktop — outside the sandbox, where it can talk to Resolve.
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 The plugin itself (skills, commands, CLAUDE.md) still loads from the Cowork sandbox as normal.
 
@@ -32,15 +35,24 @@ The plugin itself (skills, commands, CLAUDE.md) still loads from the Cowork sand
 
 ### Setup
 
+**macOS / Linux:**
+
 ```bash
 ./setup.sh              # Register MCP server in Claude Desktop
 ./setup.sh --uninstall  # Remove MCP server from Claude Desktop
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+.\setup.ps1              # Register MCP server in Claude Desktop
+.\setup.ps1 -Uninstall   # Remove MCP server from Claude Desktop
+```
+
 ### Requirements
 
 - **DaVinci Resolve must be running** on the same machine
-- **uv** must be installed (`pip install uv` or `brew install uv`)
+- **uv** must be installed (`curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS/Linux, or `irm https://astral.sh/uv/install.ps1 | iex` on Windows)
 - The Resolve scripting modules must be accessible (auto-detected on macOS, Windows, and Linux)
 
 ### Troubleshooting

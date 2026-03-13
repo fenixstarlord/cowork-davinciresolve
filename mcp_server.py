@@ -18,6 +18,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -131,7 +132,20 @@ def timeout(seconds: int):
             signal.alarm(0)
             signal.signal(signal.SIGALRM, old_handler)
     else:
-        yield  # No timeout on Windows
+        # Windows: use threading-based timeout check.
+        # Cannot preempt blocking C-extension calls, but will raise
+        # ExecutionTimeout as soon as the call returns if it exceeded the limit.
+        expired = [False]
+        def _set_expired():
+            expired[0] = True
+        timer = threading.Timer(seconds, _set_expired)
+        timer.start()
+        try:
+            yield
+        finally:
+            timer.cancel()
+            if expired[0]:
+                raise ExecutionTimeout(f"Execution timed out after {seconds} seconds.")
 
 
 def _is_statement(line: str) -> bool:

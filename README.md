@@ -23,10 +23,20 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ### 1. Build the plugin zip
 
+**macOS / Linux:**
+
 ```bash
 git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
 cd cowork-davinciresolve
 ./package.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
+cd cowork-davinciresolve
+.\package.ps1
 ```
 
 This creates `davinci-resolve.zip`. No other setup needed — `uv` auto-installs the `mcp` dependency on first run.
@@ -135,8 +145,9 @@ Full documentation is also available as MCP resources:
 
 ### MCP server not starting
 - Confirm `uv` is installed: `uv --version`
-- Confirm Python 3.10+ is available: `python3 --version`
+- Confirm Python 3.10+ is available: `python3 --version` (or `py -3 --version` on Windows)
 - Check stderr output — the server logs to stderr, not stdout
+- On Windows, if `uv` is not found after installing, restart your PowerShell session
 
 ### Connection drops mid-session
 - Resolve may have been restarted or a new project was opened
@@ -161,7 +172,9 @@ cowork-davinciresolve/
 │   └── explore.md                # /explore
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
-├── setup.sh                      # Install script
+├── setup.sh                      # Install script (macOS/Linux)
+├── setup.ps1                     # Install script (Windows)
+├── package.ps1                   # Package script (Windows)
 ├── CLAUDE.md                     # Claude Code project context
 └── README.md
 ```
