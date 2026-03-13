@@ -1,8 +1,4 @@
-# DaVinci Resolve — Claude Cowork Plugin
-
-## Project Overview
-
-Claude Cowork plugin that connects to DaVinci Resolve via a local MCP server. Execute API calls, create timelines, manage media, and render projects — all from Claude Desktop's Cowork mode.
+# DaVinci Resolve Plugin — Agent Instructions
 
 ## Architecture
 
@@ -10,22 +6,9 @@ Claude Cowork plugin that connects to DaVinci Resolve via a local MCP server. Ex
 Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 ```
 
-- **MCP Server** (`mcp_server.py`): Python server using FastMCP SDK, stdio transport
+- **MCP Server**: Python server using FastMCP SDK, stdio transport
 - **Skills**: Domain knowledge (API docs, Fusion guide, scripting patterns) loaded on-demand
-- **Commands**: Slash commands for common workflows (/create-timelines, /render, etc.)
-- **Resources**: Full API docs available at `resolve://api-docs`, `resolve://fusion-docs`, `resolve://examples`
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `mcp_server.py` | MCP server — tools, resources, execution engine |
-| `.claude-plugin/plugin.json` | Plugin manifest |
-| `.mcp.json` | MCP connector config (stdio transport) |
-| `skills/` | Domain knowledge (API ref, Fusion guide, scripting patterns) |
-| `commands/` | Slash commands for common workflows |
-| `docs/` | Raw API and Fusion documentation |
-| `examples/examples.json` | Few-shot examples |
+- **Resources**: Full API docs at `resolve://api-docs`, `resolve://fusion-docs`, `resolve://examples`
 
 ## MCP Tools
 
@@ -34,13 +17,6 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 | `run_resolve_code` | Execute Python code in Resolve's scripting environment (persistent namespace) |
 | `get_project_info` | Read-only project status check |
 | `refresh_connection` | Re-connect to Resolve after project/timeline changes |
-
-## Setup
-
-```bash
-./setup.sh                    # Install deps (just: mcp)
-# Then add this folder as a plugin in Claude Desktop
-```
 
 ## Coding Standards
 

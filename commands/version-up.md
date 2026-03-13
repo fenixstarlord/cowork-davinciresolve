@@ -1,5 +1,6 @@
 ---
 description: Version up every grade on the active timeline with date and incrementing version number
+disable-model-invocation: true
 argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---

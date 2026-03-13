@@ -1,6 +1,8 @@
 ---
 name: resolve-api
 description: DaVinci Resolve scripting API reference. Trigger when the user asks about Resolve API methods, objects, parameters, or scripting capabilities. Also trigger when generating code that calls Resolve API methods.
+user-invocable: false
+allowed-tools: Read, Grep, Glob, mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # DaVinci Resolve Scripting API Reference
