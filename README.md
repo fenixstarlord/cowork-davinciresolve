@@ -2,6 +2,8 @@
 
 Control DaVinci Resolve from Claude Desktop's Cowork mode. Execute API calls, create timelines, manage media, and render projects using natural language.
 
+> **Disclaimer:** This software was vibe coded with reckless optimism and minimal understanding of what's actually happening under the hood. The developer (generous term) cannot guarantee that anything works, will continue to work, or ever worked in the first place. Use at your own risk, amusement, or horror. By the way, this disclaimer was AI-generated, because that's how not involved I am in this code.
+
 ## Prerequisites
 
 - **[uv](https://docs.astral.sh/uv/)** — Python package runner (installs dependencies automatically)
