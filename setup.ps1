@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $PluginDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $DesktopConfig = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
 
-# ── Find Python ──────────────────────────────────────────────────────────────
+# -- Find Python ---------------------------------------------------------------
 
 function Find-Python {
     foreach ($cmd in @("py", "python")) {
@@ -30,14 +30,14 @@ if (-not $Python) {
     exit 1
 }
 
-# ── Uninstall ────────────────────────────────────────────────────────────────
+# -- Uninstall -----------------------------------------------------------------
 
 if ($Uninstall) {
     Write-Host "=== Uninstalling DaVinci Resolve MCP Server ==="
     Write-Host ""
 
     if (-not (Test-Path $DesktopConfig)) {
-        Write-Host "No Claude Desktop config found — nothing to remove."
+        Write-Host "No Claude Desktop config found -- nothing to remove."
         exit 0
     }
 
@@ -50,7 +50,7 @@ with open(config_path, "r") as f:
     try:
         config = json.load(f)
     except json.JSONDecodeError:
-        print("Config file is empty or invalid — nothing to remove.")
+        print("Config file is empty or invalid -- nothing to remove.")
         sys.exit(0)
 
 servers = config.get("mcpServers", {})
@@ -61,14 +61,14 @@ if "davinci-resolve" in servers:
     print("Removed davinci-resolve from Claude Desktop config.")
     print("Restart Claude Desktop to apply.")
 else:
-    print("davinci-resolve server not found in config — nothing to remove.")
+    print("davinci-resolve server not found in config -- nothing to remove.")
 "@
 
     & $Python -c $pyCode $DesktopConfig
     exit 0
 }
 
-# ── Install ──────────────────────────────────────────────────────────────────
+# -- Install -------------------------------------------------------------------
 
 Write-Host "=== DaVinci Resolve Cowork Plugin Setup ==="
 Write-Host ""
@@ -155,8 +155,8 @@ Write-Host ""
 Write-Host "To uninstall:  .\setup.ps1 -Uninstall"
 Write-Host ""
 Write-Host "Available slash commands:"
-Write-Host "  /create-timelines  — Create timelines from media pool clips"
-Write-Host "  /render            — Set up and start render jobs"
-Write-Host "  /import-media      — Import media files into the media pool"
-Write-Host "  /project-info      — Show current project status"
-Write-Host "  /explore           — Browse media pool, timelines, project structure"
+Write-Host "  /create-timelines  - Create timelines from media pool clips"
+Write-Host "  /render            - Set up and start render jobs"
+Write-Host "  /import-media      - Import media files into the media pool"
+Write-Host "  /project-info      - Show current project status"
+Write-Host "  /explore           - Browse media pool, timelines, project structure"
