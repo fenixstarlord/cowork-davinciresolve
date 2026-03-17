@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__davinci-resolve__get_project_info",
+      "Bash(tasklist)",
+      "Bash(python -c \"import sys; sys.path.append\\(r''C:\\\\ProgramData\\\\Blackmagic Design\\\\DaVinci Resolve\\\\Support\\\\Developer\\\\Scripting\\\\Modules''\\); import DaVinciResolveScript as dvr; print\\(dvr.scriptapp\\(''Resolve''\\)\\)\")",
+      "Bash(python -c \"import struct; print\\(struct.calcsize\\(''P''\\) * 8, ''bit''\\)\")",
+      "Bash(python -c \":*)",
+      "Bash(ls \"/c/Program Files/Blackmagic Design/DaVinci Resolve/\"python*)",
+      "Bash(grep -rao python3[0-9]*.dll '/c/Program Files/Blackmagic Design/DaVinci Resolve/fusionscript.dll')",
+      "Bash(grep -rao python3[0-9][0-9]* '/c/Program Files/Blackmagic Design/DaVinci Resolve/fusionscript.dll')",
+      "Bash(ls \"/c/Program Files/Blackmagic Design/DaVinci Resolve/\"*python* \"/c/Program Files/Blackmagic Design/DaVinci Resolve/\"*Python*)",
+      "Bash(/c/Users/chameleon/AppData/Local/Python/bin/python.exe --version)",
+      "WebSearch",
+      "WebFetch(domain:forum.blackmagicdesign.com)",
+      "mcp__davinci-resolve__refresh_connection"
+    ]
+  }
+}

@@ -47,6 +47,19 @@ def _default_resolve_script_path() -> str:
     return "/opt/resolve/Developer/Scripting/Modules"
 
 
+def _default_resolve_script_lib() -> str:
+    """Return the default path to the fusionscript native library."""
+    system = platform.system()
+    if system == "Darwin":
+        return "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/fusionscript.so"
+    elif system == "Windows":
+        return os.path.join(
+            os.environ.get("PROGRAMFILES", r"C:\Program Files"),
+            r"Blackmagic Design\DaVinci Resolve\fusionscript.dll",
+        )
+    return "/opt/resolve/libs/Fusion/fusionscript.so"
+
+
 def _connect_resolve():
     """Try to connect to a running DaVinci Resolve instance."""
     resolve_script_path = os.environ.get(
@@ -55,6 +68,18 @@ def _connect_resolve():
     )
     if resolve_script_path not in sys.path:
         sys.path.append(resolve_script_path)
+
+    # Set env vars required by DaVinciResolveScript.py to locate fusionscript
+    if not os.environ.get("RESOLVE_SCRIPT_LIB"):
+        lib = _default_resolve_script_lib()
+        if os.path.exists(lib):
+            os.environ["RESOLVE_SCRIPT_LIB"] = lib
+            log(f"Set RESOLVE_SCRIPT_LIB={lib}")
+
+    if not os.environ.get("RESOLVE_SCRIPT_API"):
+        api_path = os.path.dirname(resolve_script_path)
+        os.environ["RESOLVE_SCRIPT_API"] = api_path
+        log(f"Set RESOLVE_SCRIPT_API={api_path}")
 
     try:
         import DaVinciResolveScript as dvr_script
