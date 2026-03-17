@@ -34,3 +34,24 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 - **stdio transport** — server communicates via stdin/stdout (no network)
 - **Persistent namespace** — variables carry across `run_resolve_code` calls within a session
 - **30-second timeout** on code execution
+
+## Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/version` | Add custom named color versions to clips |
+| `/version-up` | Auto-increment dated version numbers |
+| `/transform-disable` | Disable transforms on timeline clips |
+| `/transform-enable` | Re-enable transforms on timeline clips |
+
+## Before Committing
+
+When making changes, ensure all documentation stays in sync:
+
+- **`README.md`** — Installation instructions, slash commands table, project structure tree, troubleshooting
+- **`CLAUDE.md`** — This file; slash commands table, MCP tools table, architecture notes
+- **`.claude-plugin/plugin.json`** — `version` field and `description` (contains install/troubleshooting docs shown in marketplace)
+- **`CHANGELOG.md`** — Add an entry for every user-facing change
+- **`VERSION`** — Bump for any release (keep in sync with `plugin.json` version)
+- **`setup.ps1` / `setup.sh`** — Slash commands listed in the "Available slash commands" output
+- **`mcp_server.py`** — inline script metadata (`# /// script` block) lists dependencies; update if adding/removing packages
