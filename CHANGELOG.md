@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-03-17
+
+### Fixed
+- MCP server crash on startup caused by incompatible `version` kwarg passed to `FastMCP()` constructor (newer `mcp` package versions removed this parameter)
+- Slash commands listed in setup scripts and README now match actual commands (`/version`, `/version-up`, `/transform-disable`, `/transform-enable`)
+
+### Changed
+- README now shows install-from-URL as the recommended installation method
+- Updated project structure in README to match actual files
+- Removed unused `__version__` variable from `mcp_server.py`
+
 ## [0.1.0] - 2025-06-13
 
 ### Added

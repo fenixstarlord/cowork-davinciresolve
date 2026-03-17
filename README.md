@@ -23,35 +23,44 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ## Installation
 
-### 1. Build the plugin zip
-
-**macOS / Linux:**
-
-```bash
-git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
-cd cowork-davinciresolve
-./package.sh
-```
-
-**Windows (PowerShell):**
-
-```powershell
-git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
-cd cowork-davinciresolve
-.\package.ps1
-```
-
-This creates `davinci-resolve.zip`. No other setup needed — `uv` auto-installs the `mcp` dependency on first run.
-
-### 2. Upload to Claude Desktop
+### Install via URL (Recommended)
 
 1. Open **Claude Desktop** and switch to **Cowork** mode
 2. Click **Add Plugin** > **Personal** > **+** (plus)
-3. Select **Upload plugin**
-4. Upload the `davinci-resolve.zip` file
-5. The plugin appears in your personal plugin list
+3. Select **Install from URL**
+4. Paste: `https://github.com/fenixstarlord/cowork-davinciresolve`
+5. The plugin installs automatically
 
-### 3. Start using it
+### Install manually
+
+1. **Build the plugin zip**
+
+   **macOS / Linux:**
+
+   ```bash
+   git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
+   cd cowork-davinciresolve
+   ./package.sh
+   ```
+
+   **Windows (PowerShell):**
+
+   ```powershell
+   git clone https://github.com/fenixstarlord/cowork-davinciresolve.git
+   cd cowork-davinciresolve
+   .\package.ps1
+   ```
+
+   This creates `davinci-resolve.zip`. No other setup needed — `uv` auto-installs the `mcp` dependency on first run.
+
+2. **Upload to Claude Desktop**
+
+   1. Open **Claude Desktop** and switch to **Cowork** mode
+   2. Click **Add Plugin** > **Personal** > **+** (plus)
+   3. Select **Upload plugin**
+   4. Upload the `davinci-resolve.zip` file
+
+### Start using it
 
 1. Make sure **DaVinci Resolve** is running
 2. Start a new Cowork session with the plugin enabled
@@ -97,11 +106,10 @@ Just describe what you want to do in natural language:
 
 | Command | Description |
 |---------|-------------|
-| `/create-timelines` | Create timelines from media pool clips with naming patterns |
-| `/render` | Set up and start render jobs |
-| `/import-media` | Import media files into the media pool |
-| `/project-info` | Show current project status — timelines, media pool, render queue |
-| `/explore` | Browse media pool, timelines, and project structure |
+| `/version` | Add custom named color versions to clips |
+| `/version-up` | Auto-increment dated version numbers |
+| `/transform-disable` | Disable transforms on timeline clips |
+| `/transform-enable` | Re-enable transforms on timeline clips |
 
 ## How It Works
 
@@ -148,7 +156,7 @@ Full documentation is also available as MCP resources:
 ### MCP server not starting
 - Confirm `uv` is installed: `uv --version`
 - Confirm Python 3.10+ is available: `python3 --version` (or `py -3 --version` on Windows)
-- Check stderr output — the server logs to stderr, not stdout
+- Test the server manually: `uv run mcp_server.py` (from the plugin directory) — look for errors on stderr
 - On Windows, if `uv` is not found after installing, restart your PowerShell session
 
 ### Connection drops mid-session
@@ -167,15 +175,15 @@ cowork-davinciresolve/
 │   ├── fusion-scripting/SKILL.md # Fusion scripting guide
 │   └── resolve-scripting-guide/SKILL.md  # Best practices & patterns
 ├── commands/
-│   ├── create-timelines.md       # /create-timelines
-│   ├── render.md                 # /render
-│   ├── import-media.md           # /import-media
-│   ├── project-info.md           # /project-info
-│   └── explore.md                # /explore
+│   ├── version.md                # /version
+│   ├── version-up.md             # /version-up
+│   ├── transform-disable.md      # /transform-disable
+│   └── transform-enable.md       # /transform-enable
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
 ├── setup.sh                      # Install script (macOS/Linux)
 ├── setup.ps1                     # Install script (Windows)
+├── package.sh                    # Package script (macOS/Linux)
 ├── package.ps1                   # Package script (Windows)
 ├── CLAUDE.md                     # Claude Code project context
 └── README.md
