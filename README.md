@@ -6,19 +6,8 @@ Control DaVinci Resolve from Claude Desktop's Cowork mode. Execute API calls, cr
 
 ## Prerequisites
 
-- **[uv](https://docs.astral.sh/uv/)** — Python package runner (auto-installs Python and dependencies)
 - **DaVinci Resolve** installed and running
 - **Claude Desktop** (with Cowork mode)
-
-If you don't have `uv`, install it:
-
-```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
 
 ## Installation
 
@@ -181,6 +170,18 @@ Full documentation is also available as MCP resources:
 - Confirm `uv` is installed: `uv --version`
 - Test the server manually: `uv run mcp_server.py` (from the plugin directory) — look for errors on stderr
 - On Windows, if `uv` is not found after installing, restart your PowerShell session
+
+### Installing uv manually
+
+The setup script installs [uv](https://docs.astral.sh/uv/) automatically. If that fails, install it manually:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
 ### Connection drops mid-session
 - Resolve may have been restarted or a new project was opened
