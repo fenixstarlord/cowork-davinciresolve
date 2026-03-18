@@ -1,13 +1,14 @@
 ---
+name: version
 description: Version up every grade on the active timeline with a custom name
-disable-model-invocation: true
+user-invocable: true
 argument-hint: "<name>"
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /version
 
-> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
+> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
 Add a new local color version to every clip in the **active timeline** using the provided name.
 

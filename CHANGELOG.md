@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-03-18
+
+### Changed
+- Migrated slash commands from legacy `commands/` format to `skills/` format (fixes "legacy format" warning on install)
+- Windows setup script (`setup.ps1`) no longer requires Python - uses native PowerShell for JSON config editing
+- Windows packaging script (`package.ps1`) no longer requires Python - uses native PowerShell for version sync
+- Fixed `package.ps1` parse error on Windows PowerShell 5.1 caused by UTF-8 em dash
+- Removed Python 3.10+ from prerequisites (`uv` auto-manages Python at runtime)
+- Installation docs now include the required MCP server registration step (`setup.ps1` / `setup.sh`)
+
 ## [0.1.2] - 2026-03-17
 
 ### Fixed

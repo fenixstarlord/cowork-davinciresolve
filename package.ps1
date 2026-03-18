@@ -16,18 +16,11 @@ try {
     $Version = (Get-Content -Path "VERSION" -Raw).Trim()
     Write-Host "Version: $Version"
 
-    # Sync VERSION into plugin.json using Python (avoids jq dependency)
-    $Python = $null
-    foreach ($cmd in @("py", "python")) {
-        $found = Get-Command $cmd -ErrorAction SilentlyContinue
-        if ($found) { $Python = $found.Source; break }
-    }
-
-    if ($Python) {
-        & $Python -c "import json; p='.claude-plugin/plugin.json'; d=json.load(open(p)); d['version']='$Version'; json.dump(d, open(p,'w'), indent=2)"
-    } else {
-        Write-Host "WARNING: Python not found — skipping version sync to plugin.json"
-    }
+    # Sync VERSION into plugin.json (use regex replace to preserve formatting)
+    $pluginJsonPath = Join-Path ".claude-plugin" "plugin.json"
+    $content = Get-Content -Path $pluginJsonPath -Raw
+    $content = $content -replace '"version":\s*"[^"]*"', "`"version`": `"$Version`""
+    [System.IO.File]::WriteAllText((Resolve-Path $pluginJsonPath).Path, $content)
 
     # Collect files to include (matching package.sh)
     $includeFiles = @(
@@ -44,7 +37,6 @@ try {
 
     $includeDirs = @(
         "skills"
-        "commands"
         "docs"
         "examples"
     )
@@ -73,7 +65,7 @@ try {
     Write-Host "Created: davinci-resolve.zip"
     Write-Host ""
     Write-Host "Upload this file in Claude Desktop:"
-    Write-Host "  Cowork > Add Plugin > Personal > + > Upload plugin"
+    Write-Host "  Cowork -> Add Plugin -> Personal -> + -> Upload plugin"
 } finally {
     Pop-Location
 }

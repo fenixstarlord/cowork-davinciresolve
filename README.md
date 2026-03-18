@@ -6,8 +6,7 @@ Control DaVinci Resolve from Claude Desktop's Cowork mode. Execute API calls, cr
 
 ## Prerequisites
 
-- **[uv](https://docs.astral.sh/uv/)** — Python package runner (installs dependencies automatically)
-- **Python 3.10+**
+- **[uv](https://docs.astral.sh/uv/)** — Python package runner (auto-installs Python and dependencies)
 - **DaVinci Resolve** installed and running
 - **Claude Desktop** (with Cowork mode)
 
@@ -30,6 +29,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 3. Select **Install from URL**
 4. Paste: `https://github.com/fenixstarlord/cowork-davinciresolve`
 5. The plugin installs automatically
+6. **Run the setup script** (see [Register the MCP server](#register-the-mcp-server) below)
 
 ### Install manually
 
@@ -59,6 +59,30 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
    2. Click **Add Plugin** > **Personal** > **+** (plus)
    3. Select **Upload plugin**
    4. Upload the `davinci-resolve.zip` file
+
+3. **Run the setup script** (see [Register the MCP server](#register-the-mcp-server) below)
+
+### Register the MCP server
+
+Cowork plugins run inside a sandboxed VM that cannot reach the local Resolve scripting API. The MCP server must run natively on your machine, so you need to register it in Claude Desktop's config after installing the plugin.
+
+**macOS / Linux:**
+
+```bash
+cd <plugin-directory>
+./setup.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+cd <plugin-directory>
+.\setup.ps1
+```
+
+The setup script will install `uv` if needed and add the MCP server to `claude_desktop_config.json`. Restart Claude Desktop after running it.
+
+To uninstall: `./setup.sh --uninstall` (macOS/Linux) or `.\setup.ps1 -Uninstall` (Windows).
 
 ### Start using it
 
@@ -155,7 +179,6 @@ Full documentation is also available as MCP resources:
 
 ### MCP server not starting
 - Confirm `uv` is installed: `uv --version`
-- Confirm Python 3.10+ is available: `python3 --version` (or `py -3 --version` on Windows)
 - Test the server manually: `uv run mcp_server.py` (from the plugin directory) — look for errors on stderr
 - On Windows, if `uv` is not found after installing, restart your PowerShell session
 
@@ -174,11 +197,10 @@ cowork-davinciresolve/
 │   ├── resolve-api/SKILL.md      # Resolve API reference
 │   ├── fusion-scripting/SKILL.md # Fusion scripting guide
 │   └── resolve-scripting-guide/SKILL.md  # Best practices & patterns
-├── commands/
-│   ├── version.md                # /version
-│   ├── version-up.md             # /version-up
-│   ├── transform-disable.md      # /transform-disable
-│   └── transform-enable.md       # /transform-enable
+│   ├── version/SKILL.md           # /version
+│   ├── version-up/SKILL.md       # /version-up
+│   ├── transform-disable/SKILL.md # /transform-disable
+│   └── transform-enable/SKILL.md  # /transform-enable
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
 ├── setup.sh                      # Install script (macOS/Linux)
