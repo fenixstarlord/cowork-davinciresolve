@@ -123,7 +123,7 @@ Just describe what you want to do in natural language:
 | `/version-up` | Auto-increment dated version numbers |
 | `/transform-disable` | Disable transforms on timeline clips (backs up project to Desktop first) |
 | `/transform-enable` | Re-enable transforms on timeline clips (backs up project to Desktop first) |
-| `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
+| `/roundtrip` | Roundtrip render: render clips using the Roundtrip preset, export XML, import as new timeline |
 
 ## How It Works
 
