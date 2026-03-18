@@ -16,18 +16,11 @@ try {
     $Version = (Get-Content -Path "VERSION" -Raw).Trim()
     Write-Host "Version: $Version"
 
-    # Sync VERSION into plugin.json using Python (avoids jq dependency)
-    $Python = $null
-    foreach ($cmd in @("py", "python")) {
-        $found = Get-Command $cmd -ErrorAction SilentlyContinue
-        if ($found) { $Python = $found.Source; break }
-    }
-
-    if ($Python) {
-        & $Python -c "import json; p='.claude-plugin/plugin.json'; d=json.load(open(p)); d['version']='$Version'; json.dump(d, open(p,'w'), indent=2)"
-    } else {
-        Write-Host "WARNING: Python not found - skipping version sync to plugin.json"
-    }
+    # Sync VERSION into plugin.json
+    $pluginJsonPath = Join-Path ".claude-plugin" "plugin.json"
+    $json = Get-Content -Path $pluginJsonPath -Raw | ConvertFrom-Json
+    $json.version = $Version
+    $json | ConvertTo-Json -Depth 10 | Set-Content -Path $pluginJsonPath -Encoding UTF8
 
     # Collect files to include (matching package.sh)
     $includeFiles = @(
