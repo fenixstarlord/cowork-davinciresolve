@@ -16,7 +16,6 @@ zip -r davinci-resolve.zip \
     VERSION \
     CLAUDE.md \
     skills/ \
-    commands/ \
     docs/ \
     examples/ \
     CONNECTORS.md \

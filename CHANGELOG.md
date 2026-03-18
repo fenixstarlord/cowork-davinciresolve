@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Security warning when binding to `0.0.0.0`
 - `uvicorn` dependency for SSE transport
 
+### Changed
+- Migrated slash commands from legacy `commands/` directory to `skills/` format (`skills/<name>/SKILL.md`)
+
 ## [0.1.2] - 2026-03-17
 
 ### Fixed

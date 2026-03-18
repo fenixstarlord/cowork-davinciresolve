@@ -7,7 +7,7 @@ allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get
 
 # /version
 
-> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
+> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
 Add a new local color version to every clip in the **active timeline** using the provided name.
 

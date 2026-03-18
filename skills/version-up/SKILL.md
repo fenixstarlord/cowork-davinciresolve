@@ -7,7 +7,7 @@ allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get
 
 # /version-up
 
-> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
+> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
 Add a new local color version to every clip in the **active timeline** named `<YYMMDD>_v<NN>`. The version number increments globally across all dates — it finds the highest existing `_v<NN>` across all version names and adds 1.
 

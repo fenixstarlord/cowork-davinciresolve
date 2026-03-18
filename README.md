@@ -188,14 +188,13 @@ cowork-davinciresolve/
 ├── .mcp.json                     # MCP server config (stdio + SSE)
 ├── mcp_server.py                 # MCP server — tools, resources, execution engine
 ├── skills/
-│   ├── resolve-api/SKILL.md      # Resolve API reference
-│   ├── fusion-scripting/SKILL.md # Fusion scripting guide
-│   └── resolve-scripting-guide/SKILL.md  # Best practices & patterns
-├── commands/
-│   ├── version.md                # /version
-│   ├── version-up.md             # /version-up
-│   ├── transform-disable.md      # /transform-disable
-│   └── transform-enable.md       # /transform-enable
+│   ├── resolve-api/SKILL.md              # Resolve API reference
+│   ├── fusion-scripting/SKILL.md         # Fusion scripting guide
+│   ├── resolve-scripting-guide/SKILL.md  # Best practices & patterns
+│   ├── version/SKILL.md                  # /version
+│   ├── version-up/SKILL.md              # /version-up
+│   ├── transform-disable/SKILL.md       # /transform-disable
+│   └── transform-enable/SKILL.md        # /transform-enable
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
 ├── setup.sh                      # Install script (macOS/Linux)

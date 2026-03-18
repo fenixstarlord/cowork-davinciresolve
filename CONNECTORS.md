@@ -4,7 +4,7 @@ This plugin uses a local MCP server (`mcp_server.py`) to bridge Claude and DaVin
 
 ## `~~resolve` — DaVinci Resolve MCP Server
 
-**Transport:** stdio
+**Transport:** stdio (default) or SSE (`--transport sse`)
 
 ### Why setup.sh / setup.ps1 is required
 
@@ -15,7 +15,7 @@ Running `./setup.sh` (macOS/Linux) or `.\setup.ps1` (Windows) registers the MCP 
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-The plugin itself (skills, commands, CLAUDE.md) still loads from the Cowork sandbox as normal.
+The plugin itself (skills, CLAUDE.md) still loads from the Cowork sandbox as normal.
 
 ### Tools
 
