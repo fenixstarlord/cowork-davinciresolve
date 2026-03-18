@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-03-18
+
+### Changed
+- Windows setup script (`setup.ps1`) no longer requires Python — uses native PowerShell for JSON config editing
+- Removed Python 3.10+ from prerequisites (`uv` auto-manages Python at runtime)
+
 ## [0.1.2] - 2026-03-17
 
 ### Fixed

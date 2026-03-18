@@ -14,22 +14,6 @@ $ErrorActionPreference = "Stop"
 $PluginDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $DesktopConfig = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
 
-# -- Find Python ---------------------------------------------------------------
-
-function Find-Python {
-    foreach ($cmd in @("py", "python")) {
-        $found = Get-Command $cmd -ErrorAction SilentlyContinue
-        if ($found) { return $found.Source }
-    }
-    return $null
-}
-
-$Python = Find-Python
-if (-not $Python) {
-    Write-Host "ERROR: Python not found. Install Python 3.10+ from https://python.org"
-    exit 1
-}
-
 # -- Uninstall -----------------------------------------------------------------
 
 if ($Uninstall) {
@@ -41,30 +25,22 @@ if ($Uninstall) {
         exit 0
     }
 
-    $pyCode = @"
-import json, sys
+    $raw = Get-Content -Raw $DesktopConfig
+    try {
+        $config = $raw | ConvertFrom-Json
+    } catch {
+        Write-Host "Config file is empty or invalid -- nothing to remove."
+        exit 0
+    }
 
-config_path = sys.argv[1]
-
-with open(config_path, "r") as f:
-    try:
-        config = json.load(f)
-    except json.JSONDecodeError:
-        print("Config file is empty or invalid -- nothing to remove.")
-        sys.exit(0)
-
-servers = config.get("mcpServers", {})
-if "davinci-resolve" in servers:
-    del servers["davinci-resolve"]
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
-    print("Removed davinci-resolve from Claude Desktop config.")
-    print("Restart Claude Desktop to apply.")
-else:
-    print("davinci-resolve server not found in config -- nothing to remove.")
-"@
-
-    & $Python -c $pyCode $DesktopConfig
+    if ($config.mcpServers -and $config.mcpServers.PSObject.Properties["davinci-resolve"]) {
+        $config.mcpServers.PSObject.Properties.Remove("davinci-resolve")
+        $config | ConvertTo-Json -Depth 10 | Set-Content -Path $DesktopConfig
+        Write-Host "Removed davinci-resolve from Claude Desktop config."
+        Write-Host "Restart Claude Desktop to apply."
+    } else {
+        Write-Host "davinci-resolve server not found in config -- nothing to remove."
+    }
     exit 0
 }
 
@@ -112,34 +88,25 @@ if (-not (Test-Path $DesktopConfig)) {
     Set-Content -Path $DesktopConfig -Value "{}"
 }
 
-$pyCode = @"
-import json, sys
-
-config_path = sys.argv[1]
-plugin_dir = sys.argv[2]
-uv_path = sys.argv[3]
-
-with open(config_path, "r") as f:
-    try:
-        config = json.load(f)
-    except json.JSONDecodeError:
-        config = {}
-
-if "mcpServers" not in config:
-    config["mcpServers"] = {}
-
-config["mcpServers"]["davinci-resolve"] = {
-    "command": uv_path,
-    "args": ["run", f"{plugin_dir}\\mcp_server.py"]
+$raw = Get-Content -Raw $DesktopConfig
+try {
+    $config = $raw | ConvertFrom-Json
+} catch {
+    $config = [PSCustomObject]@{}
 }
 
-with open(config_path, "w") as f:
-    json.dump(config, f, indent=2)
+if (-not $config.mcpServers) {
+    $config | Add-Member -Type NoteProperty -Name mcpServers -Value ([PSCustomObject]@{})
+}
 
-print(f"  Added davinci-resolve server -> {config_path}")
-"@
+$serverEntry = [PSCustomObject]@{
+    command = $UvPath
+    args = @("run", "$PluginDir\mcp_server.py")
+}
+$config.mcpServers | Add-Member -Type NoteProperty -Name "davinci-resolve" -Value $serverEntry -Force
 
-& $Python -c $pyCode $DesktopConfig $PluginDir $UvPath
+$config | ConvertTo-Json -Depth 10 | Set-Content -Path $DesktopConfig
+Write-Host "  Added davinci-resolve server -> $DesktopConfig"
 
 Write-Host ""
 Write-Host "Setup complete!"

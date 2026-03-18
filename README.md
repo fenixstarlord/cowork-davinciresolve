@@ -6,8 +6,7 @@ Control DaVinci Resolve from Claude Desktop's Cowork mode. Execute API calls, cr
 
 ## Prerequisites
 
-- **[uv](https://docs.astral.sh/uv/)** — Python package runner (installs dependencies automatically)
-- **Python 3.10+**
+- **[uv](https://docs.astral.sh/uv/)** — Python package runner (auto-installs Python and dependencies)
 - **DaVinci Resolve** installed and running
 - **Claude Desktop** (with Cowork mode)
 
@@ -155,7 +154,6 @@ Full documentation is also available as MCP resources:
 
 ### MCP server not starting
 - Confirm `uv` is installed: `uv --version`
-- Confirm Python 3.10+ is available: `python3 --version` (or `py -3 --version` on Windows)
 - Test the server manually: `uv run mcp_server.py` (from the plugin directory) — look for errors on stderr
 - On Windows, if `uv` is not found after installing, restart your PowerShell session
 
