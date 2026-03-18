@@ -26,7 +26,7 @@ try {
     if ($Python) {
         & $Python -c "import json; p='.claude-plugin/plugin.json'; d=json.load(open(p)); d['version']='$Version'; json.dump(d, open(p,'w'), indent=2)"
     } else {
-        Write-Host "WARNING: Python not found — skipping version sync to plugin.json"
+        Write-Host "WARNING: Python not found - skipping version sync to plugin.json"
     }
 
     # Collect files to include (matching package.sh)
