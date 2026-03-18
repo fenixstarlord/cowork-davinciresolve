@@ -123,6 +123,7 @@ Just describe what you want to do in natural language:
 | `/version-up` | Auto-increment dated version numbers |
 | `/transform-disable` | Disable transforms on timeline clips |
 | `/transform-enable` | Re-enable transforms on timeline clips |
+| `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
 
 ## How It Works
 
@@ -201,7 +202,8 @@ cowork-davinciresolve/
 │   ├── version/SKILL.md           # /version
 │   ├── version-up/SKILL.md       # /version-up
 │   ├── transform-disable/SKILL.md # /transform-disable
-│   └── transform-enable/SKILL.md  # /transform-enable
+│   ├── transform-enable/SKILL.md  # /transform-enable
+│   └── roundtrip/SKILL.md        # /roundtrip
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
 ├── setup.sh                      # Install script (macOS/Linux)
