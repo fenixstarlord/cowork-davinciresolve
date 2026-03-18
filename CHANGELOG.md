@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - Windows setup script (`setup.ps1`) no longer requires Python — uses native PowerShell for JSON config editing
 - Removed Python 3.10+ from prerequisites (`uv` auto-manages Python at runtime)
+- Installation docs now include the required MCP server registration step (`setup.ps1` / `setup.sh`)
 
 ## [0.1.2] - 2026-03-17
 
