@@ -19,14 +19,23 @@ Restore original transform and scaling values on clips in the **active timeline*
 
 ## How It Works
 1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be restored
-2. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
+2. **Save a project backup to the Desktop** before making any changes:
+   - Use `run_resolve_code` to save the current project (`project_manager.SaveProject()`) and then export a `.drp` backup to the user's Desktop
+   - Detect the OS to determine the Desktop path:
+     - **Windows**: `os.path.join(os.environ["USERPROFILE"], "Desktop")`
+     - **macOS**: `os.path.expanduser("~/Desktop")`
+   - Export with: `project_manager.ExportProject(project.GetName(), os.path.join(desktop_path, f"{project.GetName()}_backup_{timestamp}.drp"))`
+   - Use a timestamp format like `YYYYMMDD_HHMMSS` (from `datetime.datetime.now().strftime("%Y%m%d_%H%M%S")`)
+   - Tell the user where the backup was saved
+   - If the export fails, warn the user but continue with the restore operation
+3. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
    - Skip any clip where `GetProperty()` returns `None` (transitions)
    - Get the clip's source start frame via `GetSourceStartFrame()` to identify the correct backup marker for this timeline instance
    - Look for a `"TransformBackup"` marker at that source start frame by scanning markers for the backup data prefix
    - Parse the stored JSON to recover original property values
    - Restore each transform property and Scaling via `SetProperty()`
    - Delete the backup marker after successful restore
-3. Report how many clips were restored, how many had no backup, and how many transitions were ignored
+4. Report how many clips were restored, how many had no backup, and how many transitions were ignored
 
 ## Examples
 - `/transform-enable`

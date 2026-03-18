@@ -121,8 +121,8 @@ Just describe what you want to do in natural language:
 |---------|-------------|
 | `/version` | Add custom named color versions to clips |
 | `/version-up` | Auto-increment dated version numbers |
-| `/transform-disable` | Disable transforms on timeline clips |
-| `/transform-enable` | Re-enable transforms on timeline clips |
+| `/transform-disable` | Disable transforms on timeline clips (backs up project to Desktop first) |
+| `/transform-enable` | Re-enable transforms on timeline clips (backs up project to Desktop first) |
 | `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
 
 ## How It Works

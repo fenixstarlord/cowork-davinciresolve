@@ -19,7 +19,16 @@ Reset all transform properties on every clip in the **active timeline** to their
 
 ## How It Works
 1. Use `get_project_info` to identify the active timeline — tell the user which timeline will be affected
-2. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
+2. **Save a project backup to the Desktop** before making any changes:
+   - Use `run_resolve_code` to save the current project (`project_manager.SaveProject()`) and then export a `.drp` backup to the user's Desktop
+   - Detect the OS to determine the Desktop path:
+     - **Windows**: `os.path.join(os.environ["USERPROFILE"], "Desktop")`
+     - **macOS**: `os.path.expanduser("~/Desktop")`
+   - Export with: `project_manager.ExportProject(project.GetName(), os.path.join(desktop_path, f"{project.GetName()}_backup_{timestamp}.drp"))`
+   - Use a timestamp format like `YYYYMMDD_HHMMSS` (from `datetime.datetime.now().strftime("%Y%m%d_%H%M%S")`)
+   - Tell the user where the backup was saved
+   - If the export fails, warn the user but continue with the transform operation
+3. Use `run_resolve_code` to iterate all video tracks and clips in the active timeline:
    - Skip any clip where `GetProperty()` returns `None` (transitions like Cross Dissolve, Smooth Cut)
    - For each media clip, read current transform + scaling values via `GetProperty()`
    - Get the clip's source start frame via `GetSourceStartFrame()` — this is the in-point in the source media and is unique per timeline instance even when the same media pool clip is used multiple times
@@ -27,7 +36,7 @@ Reset all transform properties on every clip in the **active timeline** to their
    - If a `TransformBackup` marker already exists at that source start frame, skip backing up that clip (it was already processed) and warn the user
    - Reset transform properties to defaults: Pan=0, Tilt=0, ZoomX=1, ZoomY=1, ZoomGang=True, RotationAngle=0, AnchorPointX=0, AnchorPointY=0, Pitch=0, Yaw=0, FlipX=False, FlipY=False
    - Set Scaling to `resolve.SCALE_FIT`
-3. Report how many clips were modified, how many were skipped (already processed), and how many transitions were ignored
+4. Report how many clips were modified, how many were skipped (already processed), and how many transitions were ignored
 
 ## Examples
 - `/transform-disable`
