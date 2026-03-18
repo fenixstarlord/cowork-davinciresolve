@@ -114,10 +114,27 @@ Just describe what you want to do in natural language:
 ## How It Works
 
 ```
-Claude Desktop (Cowork) ⟶ MCP Server (stdio) ⟶ DaVinci Resolve Scripting API
+Claude Desktop (Cowork) ⟶ MCP Server (stdio or SSE) ⟶ DaVinci Resolve Scripting API
 ```
 
 The plugin runs a local **MCP server** (`mcp_server.py`) that connects to Resolve's Python scripting API. Claude writes Python code, the server executes it in Resolve, and returns the results. A persistent namespace means variables carry across calls — enabling multi-step workflows.
+
+### SSE Transport (Network Mode)
+
+By default the server uses stdio transport. For remote clients, Windows compatibility, or cloud-hosted agents, you can run the server in SSE mode:
+
+```bash
+# Start the SSE server (default: 127.0.0.1:8765)
+uv run mcp_server.py --transport sse
+
+# Custom host/port
+uv run mcp_server.py --transport sse --host 0.0.0.0 --port 9000
+
+# Using environment variables
+MCP_TRANSPORT=sse MCP_HOST=0.0.0.0 MCP_PORT=9000 uv run mcp_server.py
+```
+
+Then point your MCP client at `http://127.0.0.1:8765/sse`. The `.mcp.json` file includes a `davinci-resolve-sse` entry you can use directly.
 
 ### MCP Tools
 
@@ -168,7 +185,7 @@ Full documentation is also available as MCP resources:
 ```
 cowork-davinciresolve/
 ├── .claude-plugin/plugin.json    # Plugin manifest
-├── .mcp.json                     # MCP server config (stdio)
+├── .mcp.json                     # MCP server config (stdio + SSE)
 ├── mcp_server.py                 # MCP server — tools, resources, execution engine
 ├── skills/
 │   ├── resolve-api/SKILL.md      # Resolve API reference

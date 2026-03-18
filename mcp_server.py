@@ -1,14 +1,15 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["mcp"]
+# dependencies = ["mcp", "uvicorn"]
 # ///
 """
 DaVinci Resolve MCP Server — connects to Resolve and exposes tools for Claude Cowork.
 
-Transport: stdio (launched by Claude Desktop via .mcp.json)
-IMPORTANT: Never print to stdout — use stderr for logging.
+Transport: stdio (default) or SSE (network, for remote/Windows clients).
+IMPORTANT: Never print to stdout in stdio mode — use stderr for logging.
 """
 
+import argparse
 import ast
 import io
 import json
@@ -360,9 +361,48 @@ def _err(msg):
     return f"ERROR: {msg}"
 
 
+# ── CLI Argument Parsing ─────────────────────────────────────────────────────
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="DaVinci Resolve MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default=None,
+        help="Transport mode (default: stdio). Can also set MCP_TRANSPORT env var.",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="Host to bind SSE server (default: 127.0.0.1). Can also set MCP_HOST env var.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Port for SSE server (default: 8765). Can also set MCP_PORT env var.",
+    )
+    return parser.parse_args()
+
+
+def _resolve_config(args):
+    """Resolve CLI args with env var fallbacks."""
+    transport = args.transport or os.environ.get("MCP_TRANSPORT", "stdio")
+    host = args.host or os.environ.get("MCP_HOST", "127.0.0.1")
+    port = args.port or int(os.environ.get("MCP_PORT", "8765"))
+    return transport, host, port
+
+
 # ── MCP Server Definition ───────────────────────────────────────────────────
 
-mcp = FastMCP("DaVinci Resolve")
+# Parse args early so host/port can be passed to FastMCP constructor for SSE mode.
+_args = _parse_args() if __name__ == "__main__" else argparse.Namespace(transport=None, host=None, port=None)
+_transport, _host, _port = _resolve_config(_args)
+
+if _transport == "sse":
+    mcp = FastMCP("DaVinci Resolve", host=_host, port=_port)
+else:
+    mcp = FastMCP("DaVinci Resolve")
 
 TIMEOUT_SECONDS = 30
 
@@ -541,6 +581,13 @@ def get_examples() -> str:
 # ── Startup ──────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    log("Starting DaVinci Resolve MCP server...")
+    log(f"Starting DaVinci Resolve MCP server (transport={_transport})...")
     _valid_methods = _load_valid_methods()
-    mcp.run()
+
+    if _transport == "sse":
+        if _host == "0.0.0.0":
+            log("WARNING: Binding to 0.0.0.0 — this server will be accessible from the network.")
+        log(f"SSE server listening on http://{_host}:{_port}")
+        mcp.run(transport="sse")
+    else:
+        mcp.run()

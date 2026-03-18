@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-03-18
+
+### Added
+- SSE (Server-Sent Events) transport mode for remote and Windows clients (`--transport sse`)
+- CLI flags for transport configuration: `--transport`, `--host`, `--port`
+- Environment variable fallbacks: `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`
+- SSE server entry in `.mcp.json` (`davinci-resolve-sse`)
+- Security warning when binding to `0.0.0.0`
+- `uvicorn` dependency for SSE transport
+
 ## [0.1.2] - 2026-03-17
 
 ### Fixed

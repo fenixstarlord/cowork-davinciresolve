@@ -5,6 +5,11 @@
       "command": "uv",
       "args": ["run", "mcp_server.py"],
       "env": {}
+    },
+    "davinci-resolve-sse": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8765/sse",
+      "_comment": "SSE mode — start the server first: uv run mcp_server.py --transport sse"
     }
   }
 }

@@ -3,10 +3,10 @@
 ## Architecture
 
 ```
-Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
+Claude Desktop (Cowork) → MCP Server (stdio or SSE) → DaVinci Resolve Scripting API
 ```
 
-- **MCP Server**: Python server using FastMCP SDK, stdio transport
+- **MCP Server**: Python server using FastMCP SDK, stdio (default) or SSE transport
 - **Skills**: Domain knowledge (API docs, Fusion guide, scripting patterns) loaded on-demand
 - **Resources**: Full API docs at `resolve://api-docs`, `resolve://fusion-docs`, `resolve://examples`
 
@@ -31,7 +31,8 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 
 - **Active timeline only** — all commands operate on the currently active timeline unless the user explicitly specifies otherwise. Never modify clips in other timelines without being asked.
 - **Resolve must be running** for tools to work
-- **stdio transport** — server communicates via stdin/stdout (no network)
+- **stdio transport** (default) — server communicates via stdin/stdout (no network)
+- **SSE transport** (opt-in) — server listens on HTTP for remote/Windows clients (`--transport sse`)
 - **Persistent namespace** — variables carry across `run_resolve_code` calls within a session
 - **30-second timeout** on code execution
 
