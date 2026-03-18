@@ -73,7 +73,7 @@ try {
     Write-Host "Created: davinci-resolve.zip"
     Write-Host ""
     Write-Host "Upload this file in Claude Desktop:"
-    Write-Host '  Cowork > Add Plugin > Personal > + > Upload plugin'
+    Write-Host "  Cowork -> Add Plugin -> Personal -> + -> Upload plugin"
 } finally {
     Pop-Location
 }
