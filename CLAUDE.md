@@ -43,6 +43,7 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 | `/version-up` | Auto-increment dated version numbers |
 | `/transform-disable` | Disable transforms on timeline clips |
 | `/transform-enable` | Re-enable transforms on timeline clips |
+| `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
 
 ## Before Committing
 

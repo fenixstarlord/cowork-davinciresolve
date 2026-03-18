@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-03-18
+
+### Added
+- `/roundtrip` slash command — renders individual clips, exports FCP 7 XML (preserving transforms, crops, opacity, sizing, audio levels), and imports as a new timeline linked to rendered media
+- Cross-platform support for roundtrip paths (macOS and Windows)
+
 ## [0.1.3] - 2026-03-18
 
 ### Changed
