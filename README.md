@@ -22,13 +22,13 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ## Installation
 
-### Install via URL (Recommended)
+### Install via Marketplace (Recommended)
 
 1. Open **Claude Desktop** and switch to **Cowork** mode
 2. Click **Add Plugin** > **Personal** > **+** (plus)
 3. Select **Install from URL**
-4. Paste: `https://github.com/fenixstarlord/cowork-davinciresolve`
-5. The plugin installs automatically
+4. Paste: `https://github.com/fenixstarlord/cowork-chameleonmarketplace`
+5. Select the **DaVinci Resolve** plugin and install it
 6. **Run the setup script** (see [Register the MCP server](#register-the-mcp-server) below)
 
 ### Install manually

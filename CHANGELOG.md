@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Fixed `package.ps1` parse error on Windows PowerShell 5.1 caused by UTF-8 em dash
 - Removed Python 3.10+ from prerequisites (`uv` auto-manages Python at runtime)
 - Installation docs now include the required MCP server registration step (`setup.ps1` / `setup.sh`)
+- Updated recommended install method to use Chameleon Marketplace URL instead of direct repo URL
 
 ## [0.1.2] - 2026-03-17
 
