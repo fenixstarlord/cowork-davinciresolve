@@ -16,11 +16,11 @@ try {
     $Version = (Get-Content -Path "VERSION" -Raw).Trim()
     Write-Host "Version: $Version"
 
-    # Sync VERSION into plugin.json
+    # Sync VERSION into plugin.json (use regex replace to preserve formatting)
     $pluginJsonPath = Join-Path ".claude-plugin" "plugin.json"
-    $json = Get-Content -Path $pluginJsonPath -Raw | ConvertFrom-Json
-    $json.version = $Version
-    $json | ConvertTo-Json -Depth 10 | Set-Content -Path $pluginJsonPath -Encoding UTF8
+    $content = Get-Content -Path $pluginJsonPath -Raw
+    $content = $content -replace '"version":\s*"[^"]*"', "`"version`": `"$Version`""
+    [System.IO.File]::WriteAllText((Resolve-Path $pluginJsonPath).Path, $content)
 
     # Collect files to include (matching package.sh)
     $includeFiles = @(
