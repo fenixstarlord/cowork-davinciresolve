@@ -1,13 +1,14 @@
 ---
+name: transform-disable
 description: Reset transforms on active timeline clips and set scaling to Scale to Fit
-disable-model-invocation: true
+user-invocable: true
 argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /transform-disable
 
-> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
+> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
 Reset all transform properties on every clip in the **active timeline** to their defaults and set scaling to "Scale to Fit". Original values are backed up in clip markers so they can be restored later with `/transform-enable`.
 

@@ -37,7 +37,6 @@ try {
 
     $includeDirs = @(
         "skills"
-        "commands"
         "docs"
         "examples"
     )

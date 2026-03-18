@@ -1,13 +1,14 @@
 ---
+name: transform-enable
 description: Restore previously backed-up transform values on active timeline clips
-disable-model-invocation: true
+user-invocable: true
 argument-hint: ""
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
 # /transform-enable
 
-> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../CONNECTORS.md).
+> If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
 Restore original transform and scaling values on clips in the **active timeline** that were previously modified by `/transform-disable`. Reads backup data from Purple clip markers and removes them after restoring.
 
