@@ -44,6 +44,11 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 | `/transform-disable` | Disable transforms on timeline clips |
 | `/transform-enable` | Re-enable transforms on timeline clips |
 | `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
+| `/conform` | Compare two timelines and report conformance differences |
+| `/deliver` | Queue multi-format renders and monitor progress |
+| `/organize` | Auto-organize media pool clips into bins by metadata |
+| `/audit` | Inspect active timeline for common issues (gaps, mixed FPS, etc.) |
+| `/snapshot` | Save/diff project state snapshots across sessions |
 
 ## Before Committing
 

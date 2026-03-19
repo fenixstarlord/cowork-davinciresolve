@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-03-19
+
+### Added
+- `/conform` slash command — compare two timelines and report differences in clip order, durations, and edit points with optional auto-fix for slip edits
+- `/deliver` slash command — queue multi-format renders (ProRes, DNxHR, H.264, H.265, presets), monitor progress, and report results
+- `/organize` slash command — auto-organize media pool clips into bins by camera, date, resolution, codec, file type, or filename pattern; flags offline media, duplicates, and FPS mismatches
+- `/audit` slash command — inspect the active timeline for gaps, mixed frame rates, mixed resolutions, empty tracks, non-default transforms, and offline media; generates a read-only health report
+- `/snapshot` slash command — save project state snapshots (timelines, clips, media pool) and diff between snapshots to track editorial changes across sessions
+
 ## [0.2.0] - 2026-03-18
 
 ### Added
