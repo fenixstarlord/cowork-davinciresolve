@@ -1,8 +1,8 @@
 ---
 name: snapshot
-description: Take a snapshot of the current project state, export a project backup to the Desktop, or compare two snapshots to see what changed.
+description: Save, restore, or compare project snapshots. Exports .drp backups to the Desktop.
 user-invocable: true
-argument-hint: "[save [<name>] | diff <name1> <name2> | list]"
+argument-hint: "[save [<name>] | restore | restore timeline | diff <name1> <name2> | list]"
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
@@ -17,9 +17,11 @@ Take a snapshot of the current project state (timeline structure, clip list, ren
 ## Usage
 
 ```
-/snapshot save [<name>]      — Save a snapshot and export project to Desktop (default name: Snapshot_YYYYMMDD)
+/snapshot save [<name>]         — Save a full project snapshot and export .drp to Desktop
+/snapshot restore               — Restore the full project from a snapshot (.drp import)
+/snapshot restore timeline      — Restore only the active timeline's clips from a snapshot
 /snapshot diff <name1> <name2>  — Compare two snapshots
-/snapshot list               — List all saved snapshots
+/snapshot list                  — List all saved snapshots
 ```
 
 If no subcommand is given, default to `save`.
@@ -215,6 +217,188 @@ Snapshot "<snapshot_name>" saved.
 - Project export: <export_path>
 ```
 
+## Subcommand: restore
+
+Restore the full project from a previously saved snapshot by importing the `.drp` backup.
+
+### Step 1 — List snapshots with paginated picker
+
+Show the last 10 snapshots (most recent first), numbered 1–9 and 0 (for the 10th). If there are more than 10, show `n` to load the next page.
+
+```python
+import os, json
+
+snap_dir = os.path.expanduser("~/.resolve-snapshots")
+project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
+
+if not os.path.exists(project_dir):
+    print("No snapshots found for this project.")
+else:
+    files = sorted(
+        [f for f in os.listdir(project_dir) if f.endswith(".json")],
+        key=lambda f: os.path.getmtime(os.path.join(project_dir, f)),
+        reverse=True
+    )
+
+    page = 0  # start at first page
+    page_size = 10
+    start = page * page_size
+    page_files = files[start:start + page_size]
+
+    for i, f in enumerate(page_files):
+        key = i + 1 if i < 9 else 0  # 1-9, then 0 for 10th
+        path = os.path.join(project_dir, f)
+        with open(path) as fh:
+            snap = json.load(fh)
+        name = f.replace(".json", "")
+        ts = snap.get("timestamp", "?")
+        tl_count = len(snap.get("timelines", []))
+        print(f"  {key}) {name} — {ts} — {tl_count} timelines")
+
+    if len(files) > start + page_size:
+        print(f"  n) Next page ({len(files) - start - page_size} more)")
+```
+
+Present this to the user and ask them to pick a number (1–9, 0) or `n` for the next page. If they pick `n`, increment the page and show the next 10.
+
+### Step 2 — Import the .drp project backup
+
+Once the user picks a snapshot, import the `.drp` file from the Desktop:
+
+```python
+import os
+
+desktop = os.path.expanduser("~/Desktop")
+export_dir = os.path.join(desktop, selected_snapshot_name)
+drp_path = os.path.join(export_dir, f"{project.GetName()}.drp")
+
+if not os.path.exists(drp_path):
+    print(f"Project backup not found at: {drp_path}")
+    print("The .drp file may have been moved or deleted from the Desktop.")
+    print("You can manually import it via File > Import Project.")
+else:
+    result = project_manager.ImportProject(drp_path)
+    if result:
+        print(f"Project restored from: {drp_path}")
+        print("The imported project appears as a separate entry in the Project Manager.")
+        print("Switch to it via Project Manager if needed.")
+    else:
+        print(f"ImportProject returned False — the project name may already exist.")
+        print("Try renaming the current project first, or import manually via File > Import Project.")
+```
+
+**Note:** `ImportProject` creates a new project entry in the Project Manager — it does not overwrite the current project. The user should switch to the imported project manually. Inform them of this.
+
+Report to the user:
+
+```
+Restored from snapshot "<name>".
+- Imported project: <drp_path>
+- The restored project is available in the Project Manager.
+- Switch to it to continue working from the restored state.
+```
+
+## Subcommand: restore timeline
+
+Restore only the **active timeline** by comparing its current state to the snapshot and reverting clip properties (transforms, positions) to match the saved state.
+
+### Step 1 — List snapshots with paginated picker
+
+Same paginated picker as `restore` above — show last 10 snapshots numbered 1–9 and 0, with `n` for next page. Ask the user to pick one.
+
+### Step 2 — Load the selected snapshot and find the matching timeline
+
+```python
+import os, json
+
+snap_dir = os.path.expanduser("~/.resolve-snapshots")
+project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
+snap_path = os.path.join(project_dir, f"{selected_snapshot_name}.json")
+
+with open(snap_path) as f:
+    snap = json.load(f)
+
+active_tl = project.GetCurrentTimeline()
+active_name = active_tl.GetName()
+
+# Find matching timeline in snapshot
+snap_tl = None
+for tl_data in snap["timelines"]:
+    if tl_data["name"] == active_name:
+        snap_tl = tl_data
+        break
+
+if snap_tl is None:
+    print(f"Timeline '{active_name}' not found in snapshot '{selected_snapshot_name}'.")
+    print("Available timelines in this snapshot:")
+    for tl_data in snap["timelines"]:
+        print(f"  - {tl_data['name']}")
+```
+
+If the timeline isn't found, report available timelines and stop.
+
+### Step 3 — Compare current clips against snapshot and restore transforms
+
+Iterate the active timeline's clips and restore transform properties from the snapshot:
+
+```python
+restored = 0
+not_found = 0
+skipped_transitions = 0
+
+video_tracks = active_tl.GetTrackCount("video")
+for t in range(1, video_tracks + 1):
+    items = active_tl.GetItemListInTrack("video", t)
+    if items is None:
+        continue
+    for item in items:
+        props = item.GetProperty()
+        if props is None:
+            skipped_transitions += 1
+            continue
+
+        clip_name = item.GetName()
+        clip_start = item.GetStart()
+
+        # Find matching clip in snapshot (by name, track, and track_type)
+        match = None
+        for sc in snap_tl["clips"]:
+            if sc["name"] == clip_name and sc["track"] == t and sc["track_type"] == "video":
+                match = sc
+                break
+
+        if match is None:
+            not_found += 1
+            continue
+
+        # Restore transform properties
+        for prop in ["ZoomX", "ZoomY", "Pan", "Tilt", "RotationAngle"]:
+            if prop in match and match[prop] is not None:
+                item.SetProperty(prop, match[prop])
+
+        restored += 1
+
+print(f"Restored transforms: {restored} clips")
+print(f"Not found in snapshot: {not_found} clips")
+print(f"Skipped transitions: {skipped_transitions}")
+```
+
+### Step 4 — Report results
+
+```
+## Timeline Restore: <active_name>
+
+Restored from snapshot: <selected_snapshot_name>
+
+- Clips restored: N (transforms reverted to snapshot state)
+- Clips not found in snapshot: N (new clips added after snapshot)
+- Transitions skipped: N
+
+Restored properties: ZoomX, ZoomY, Pan, Tilt, RotationAngle
+```
+
+**Important:** `restore timeline` only restores transform properties on clips that exist in both the current timeline and the snapshot. It does **not** add or remove clips, change clip order, or modify edit points. It matches clips by name and track number. If clips have been renamed or moved to different tracks since the snapshot, they won't be matched.
+
 ## Subcommand: list
 
 ```python
@@ -370,7 +554,10 @@ If there are no differences, report "Snapshots are identical."
 
 ## Implementation notes
 
-- **Read-only**: Snapshots only read project state, never modify it.
+- **Save is read-only**: `save` only reads project state and exports a backup — it never modifies the project.
+- **Restore imports**: `restore` imports the `.drp` as a new project entry — it does not overwrite the current project.
+- **Restore timeline modifies clips**: `restore timeline` writes transform properties back to clips on the active timeline. It does not add/remove clips or change edit points.
+- **Paginated picker**: Both `restore` and `restore timeline` show the last 10 snapshots numbered 1–9 and 0, most recent first. `n` loads the next page.
 - **1-based indexing** for tracks and timeline indices.
 - **Skip transitions**: `item.GetProperty()` returns `None` for transitions.
 - **Guard against None**: `GetItemListInTrack()`, `GetClipList()`, `GetSubFolderList()` can return None.
@@ -387,6 +574,8 @@ If there are no differences, report "Snapshots are identical."
 ```
 /snapshot save                    — saves as Snapshot_20260320
 /snapshot save ColorSession       — saves as ColorSession_20260320
+/snapshot restore                 — pick a snapshot, import the .drp project backup
+/snapshot restore timeline        — pick a snapshot, restore transforms on active timeline
 /snapshot diff Snapshot_20260319 ColorSession_20260320
 /snapshot list
 ```
