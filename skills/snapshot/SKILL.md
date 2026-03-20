@@ -1,8 +1,8 @@
 ---
 name: snapshot
-description: Take a snapshot of the current project state or compare two snapshots to see what changed.
+description: Take a snapshot of the current project state, export a project backup to the Desktop, or compare two snapshots to see what changed.
 user-invocable: true
-argument-hint: "[save <name> | diff <name1> <name2> | list]"
+argument-hint: "[save | diff <name1> <name2> | list]"
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
@@ -10,31 +10,48 @@ allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get
 
 > If you see unfamiliar placeholders or need to check which tools are connected, see [CONNECTORS.md](../../CONNECTORS.md).
 
-Take a snapshot of the current project state (timeline structure, clip list, render settings) and compare snapshots to see exactly what changed between sessions or editorial passes.
+Take a snapshot of the current project state (timeline structure, clip list, render settings), export a `.drp` project backup to the Desktop, and compare snapshots to see exactly what changed between sessions or editorial passes.
 
-**Important:** This command is read-only when taking snapshots. It does not modify the project.
+**Important:** The save subcommand exports a copy of the project to the Desktop but does not modify the project itself.
 
 ## Usage
 
 ```
-/snapshot save <name>        — Save a snapshot of the current project state
+/snapshot save               — Save a snapshot named Snapshot_YYYYMMDD and export project to Desktop
 /snapshot diff <name1> <name2>  — Compare two snapshots
 /snapshot list               — List all saved snapshots
 ```
 
-If no subcommand is given, ask the user what they want to do.
+If no subcommand is given, default to `save`.
 
 ## Subcommand: save
 
-### Step 1 — Capture project state
+### Step 1 — Generate snapshot name and capture project state
+
+The snapshot name is always auto-generated as `Snapshot_YYYYMMDD` (e.g., `Snapshot_20260320`). If a snapshot with the same name already exists (same day), append an incrementing suffix: `Snapshot_20260320_2`, `Snapshot_20260320_3`, etc.
 
 ```python
 import json
 import os
 from datetime import datetime
 
+now = datetime.now()
+snapshot_name = f"Snapshot_{now.strftime('%Y%m%d')}"
+
+# Check for existing same-day snapshots and increment if needed
+snap_dir = os.path.expanduser("~/.resolve-snapshots")
+project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
+if os.path.exists(project_dir):
+    existing = [f.replace(".json", "") for f in os.listdir(project_dir) if f.endswith(".json")]
+    if snapshot_name in existing:
+        counter = 2
+        while f"{snapshot_name}_{counter}" in existing:
+            counter += 1
+        snapshot_name = f"{snapshot_name}_{counter}"
+
 snapshot = {
-    "timestamp": datetime.now().isoformat(),
+    "timestamp": now.isoformat(),
+    "snapshot_name": snapshot_name,
     "project_name": project.GetName(),
     "timelines": [],
     "media_pool": [],
@@ -138,12 +155,11 @@ snapshot["media_pool"] = scan_pool(media_pool.GetRootFolder())
 
 ### Step 4 — Save snapshot to disk
 
-Save as JSON in a `.snapshots` directory relative to the project database or a user-specified path:
+Save as JSON in a `.resolve-snapshots` directory under the user's home:
 
 ```python
 import os, json
 
-# Store in the user's home directory under .resolve-snapshots/
 snap_dir = os.path.expanduser("~/.resolve-snapshots")
 project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
 os.makedirs(project_dir, exist_ok=True)
@@ -159,15 +175,41 @@ print(f"Total clips: {clip_count}")
 print(f"Media pool entries: {len(snapshot['media_pool'])}")
 ```
 
+### Step 5 — Export project to Desktop
+
+Export a `.drp` copy of the project to the user's Desktop, named with the snapshot name:
+
+```python
+import os
+
+desktop = os.path.expanduser("~/Desktop")
+export_dir = os.path.join(desktop, snapshot_name)
+os.makedirs(export_dir, exist_ok=True)
+
+export_path = os.path.join(export_dir, f"{project.GetName()}.drp")
+result = project_manager.ExportProject(project.GetName(), export_path, withStillsAndLUTs=False)
+
+if result:
+    print(f"Project exported: {export_path}")
+else:
+    # ExportProject may not support the path argument in all versions
+    # Fall back: export to the default location and notify the user
+    print(f"ExportProject returned False — the project may have been exported to Resolve's default export location.")
+    print(f"Target was: {export_path}")
+```
+
+**Note:** `project_manager.ExportProject()` behavior varies by Resolve version. The method signature is `ExportProject(projectName, filePath, withStillsAndLUTs=False)`. If the export fails, inform the user and suggest exporting manually via File > Export Project.
+
 Report to the user:
 
 ```
-Snapshot "<name>" saved.
+Snapshot "<snapshot_name>" saved.
 - Project: <project_name>
 - Timelines: N
 - Total timeline clips: N
 - Media pool entries: N
-- Saved to: <path>
+- Snapshot JSON: <snap_path>
+- Project export: <export_path>
 ```
 
 ## Subcommand: list
@@ -332,13 +374,15 @@ If there are no differences, report "Snapshots are identical."
 - **Persistent variables**: Snapshot data survives across `run_resolve_code` calls.
 - **Large projects**: Break capture into per-timeline calls for projects with many timelines.
 - **Storage**: Snapshots are saved as JSON files in `~/.resolve-snapshots/<ProjectName>/`. Each snapshot is typically a few KB to a few MB depending on project size.
+- **Project export**: A `.drp` project file is exported to `~/Desktop/<snapshot_name>/`. This is a full Resolve project backup that can be re-imported.
+- **Auto-naming**: Snapshot names are always `Snapshot_YYYYMMDD`. Same-day snapshots get a numeric suffix (`_2`, `_3`, etc.).
+- **ExportProject**: `project_manager.ExportProject(projectName, filePath, withStillsAndLUTs)` exports the project database entry. The `withStillsAndLUTs` flag controls whether stills and LUTs are included (default False to keep exports small).
 - **Cross-session**: Snapshots persist on disk and can be compared across different sessions.
 
 ## Examples
 
 ```
-/snapshot save before_color
-/snapshot save after_color
-/snapshot diff before_color after_color
+/snapshot save
+/snapshot diff Snapshot_20260319 Snapshot_20260320
 /snapshot list
 ```

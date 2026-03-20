@@ -128,7 +128,7 @@ Just describe what you want to do in natural language:
 | `/deliver` | Queue multi-format renders and monitor progress |
 | `/organize` | Auto-organize media pool clips into bins by metadata |
 | `/audit` | Inspect active timeline for common issues (gaps, mixed FPS, etc.) |
-| `/snapshot` | Save/diff project state snapshots across sessions |
+| `/snapshot` | Save dated project snapshot with .drp export to Desktop; diff snapshots across sessions |
 
 ## How It Works
 
