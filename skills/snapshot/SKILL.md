@@ -20,7 +20,8 @@ Take a snapshot of the current project state (timeline structure, clip list, ren
 /snapshot save [<name>]         — Save a full project snapshot and export .drp to Desktop
 /snapshot restore               — Restore the full project from a snapshot (.drp import)
 /snapshot restore timeline      — Restore only the active timeline's clips from a snapshot
-/snapshot diff <name1> <name2>  — Compare two snapshots
+/snapshot diff                   — Compare active timeline's current state to the most recent snapshot
+/snapshot diff <name>            — Compare active timeline's current state to a specific snapshot
 /snapshot list                  — List all saved snapshots
 ```
 
@@ -433,7 +434,12 @@ Present as a table:
 
 ## Subcommand: diff
 
-### Step 1 — Load both snapshots
+Compare the **active timeline's current state** against a snapshot. Shows what changed (clips added/removed, duration changes, transform changes) since the snapshot was taken.
+
+- `/snapshot diff` — compares against the **most recent** snapshot
+- `/snapshot diff <name>` — compares against the named snapshot
+
+### Step 1 — Load the snapshot
 
 ```python
 import os, json
@@ -441,116 +447,164 @@ import os, json
 snap_dir = os.path.expanduser("~/.resolve-snapshots")
 project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
 
-with open(os.path.join(project_dir, f"{name1}.json")) as f:
-    snap1 = json.load(f)
-with open(os.path.join(project_dir, f"{name2}.json")) as f:
-    snap2 = json.load(f)
+if not os.path.exists(project_dir):
+    print("No snapshots found for this project.")
+else:
+    if snapshot_name:
+        # User specified a snapshot name
+        snap_path = os.path.join(project_dir, f"{snapshot_name}.json")
+        if not os.path.exists(snap_path):
+            print(f"Snapshot '{snapshot_name}' not found.")
+            # List available snapshots
+            files = [f.replace(".json", "") for f in os.listdir(project_dir) if f.endswith(".json")]
+            print("Available: " + ", ".join(files))
+    else:
+        # No name given — use the most recent snapshot
+        files = sorted(
+            [f for f in os.listdir(project_dir) if f.endswith(".json")],
+            key=lambda f: os.path.getmtime(os.path.join(project_dir, f)),
+            reverse=True
+        )
+        if not files:
+            print("No snapshots found.")
+        else:
+            snapshot_name = files[0].replace(".json", "")
+            snap_path = os.path.join(project_dir, f"{snapshot_name}.json")
+            print(f"Using most recent snapshot: {snapshot_name}")
+
+    with open(snap_path) as f:
+        snap = json.load(f)
 ```
 
-### Step 2 — Compare timelines
+### Step 2 — Find the active timeline in the snapshot
 
 ```python
-tl_names_1 = {tl["name"] for tl in snap1["timelines"]}
-tl_names_2 = {tl["name"] for tl in snap2["timelines"]}
+active_tl = project.GetCurrentTimeline()
+active_name = active_tl.GetName()
 
-added_tl = tl_names_2 - tl_names_1
-removed_tl = tl_names_1 - tl_names_2
-common_tl = tl_names_1 & tl_names_2
+snap_tl = None
+for tl_data in snap["timelines"]:
+    if tl_data["name"] == active_name:
+        snap_tl = tl_data
+        break
+
+if snap_tl is None:
+    print(f"Timeline '{active_name}' not found in snapshot '{snapshot_name}'.")
+    print("Available timelines in this snapshot:")
+    for tl_data in snap["timelines"]:
+        print(f"  - {tl_data['name']}")
 ```
 
-### Step 3 — Compare clips in common timelines
+If the timeline isn't found, report and stop.
 
-For each common timeline, compare clip lists:
+### Step 3 — Capture current timeline state and compare
 
 ```python
-diffs = {}
-for tl_name in common_tl:
-    tl1 = next(tl for tl in snap1["timelines"] if tl["name"] == tl_name)
-    tl2 = next(tl for tl in snap2["timelines"] if tl["name"] == tl_name)
-
-    clips1 = {(c["name"], c["track"], c["track_type"], c["start"]): c for c in tl1["clips"]}
-    clips2 = {(c["name"], c["track"], c["track_type"], c["start"]): c for c in tl2["clips"]}
-
-    keys1 = set(clips1.keys())
-    keys2 = set(clips2.keys())
-
-    added = keys2 - keys1
-    removed = keys1 - keys2
-
-    # Check for modified clips (same name+track but different properties)
-    modified = []
-    # Match by name+track+type (ignoring position)
-    by_ntt_1 = {}
-    for k, c in clips1.items():
-        ntt = (c["name"], c["track"], c["track_type"])
-        by_ntt_1.setdefault(ntt, []).append(c)
-    by_ntt_2 = {}
-    for k, c in clips2.items():
-        ntt = (c["name"], c["track"], c["track_type"])
-        by_ntt_2.setdefault(ntt, []).append(c)
-
-    for ntt in set(by_ntt_1.keys()) & set(by_ntt_2.keys()):
-        for c1 in by_ntt_1[ntt]:
-            for c2 in by_ntt_2[ntt]:
-                changes = []
-                if c1["start"] != c2["start"]:
-                    changes.append(f"start: {c1['start']} -> {c2['start']}")
-                if c1["end"] != c2["end"]:
-                    changes.append(f"end: {c1['end']} -> {c2['end']}")
-                if c1["duration"] != c2["duration"]:
-                    changes.append(f"duration: {c1['duration']} -> {c2['duration']}")
-                for prop in ["ZoomX", "ZoomY", "Pan", "Tilt", "RotationAngle"]:
-                    if c1.get(prop) != c2.get(prop):
-                        changes.append(f"{prop}: {c1.get(prop)} -> {c2.get(prop)}")
-                if changes:
-                    modified.append({"clip": c1["name"], "track": c1["track"], "changes": changes})
-
-    diffs[tl_name] = {
-        "added": [clips2[k] for k in added],
-        "removed": [clips1[k] for k in removed],
-        "modified": modified,
-        "track_count_change": {
-            "video": tl2["video_tracks"] - tl1["video_tracks"],
-            "audio": tl2["audio_tracks"] - tl1["audio_tracks"],
+# Capture current clips
+current_clips = []
+video_tracks = active_tl.GetTrackCount("video")
+for t in range(1, video_tracks + 1):
+    items = active_tl.GetItemListInTrack("video", t)
+    if items is None:
+        continue
+    for item in items:
+        props = item.GetProperty()
+        if props is None:
+            continue  # transition
+        mp = item.GetMediaPoolItem()
+        clip = {
+            "name": item.GetName(),
+            "track": t,
+            "track_type": "video",
+            "start": item.GetStart(),
+            "end": item.GetEnd(),
+            "duration": item.GetDuration(),
+            "file_path": mp.GetClipProperty("File Path") if mp else "",
         }
-    }
+        for prop in ["ZoomX", "ZoomY", "Pan", "Tilt", "RotationAngle"]:
+            clip[prop] = item.GetProperty(prop)
+        current_clips.append(clip)
+
+snap_clips = snap_tl["clips"]
+
+# Build lookups by (name, track, track_type)
+from collections import defaultdict
+
+def build_lookup(clips):
+    lookup = defaultdict(list)
+    for c in clips:
+        if c.get("track_type") == "video":
+            key = (c["name"], c["track"], c["track_type"])
+            lookup[key].append(c)
+    return lookup
+
+current_lookup = build_lookup(current_clips)
+snap_lookup = build_lookup(snap_clips)
+
+# Find added clips (in current but not in snapshot)
+added = []
+for key in current_lookup:
+    if key not in snap_lookup:
+        added.extend(current_lookup[key])
+
+# Find removed clips (in snapshot but not in current)
+removed = []
+for key in snap_lookup:
+    if key not in current_lookup:
+        removed.extend(snap_lookup[key])
+
+# Find modified clips
+modified = []
+for key in set(current_lookup.keys()) & set(snap_lookup.keys()):
+    for cc in current_lookup[key]:
+        for sc in snap_lookup[key]:
+            changes = []
+            if cc["start"] != sc["start"]:
+                changes.append(f"start: {sc['start']} -> {cc['start']}")
+            if cc["end"] != sc["end"]:
+                changes.append(f"end: {sc['end']} -> {cc['end']}")
+            if cc["duration"] != sc["duration"]:
+                changes.append(f"duration: {sc['duration']} -> {cc['duration']}")
+            for prop in ["ZoomX", "ZoomY", "Pan", "Tilt", "RotationAngle"]:
+                if cc.get(prop) != sc.get(prop):
+                    changes.append(f"{prop}: {sc.get(prop)} -> {cc.get(prop)}")
+            if changes:
+                modified.append({"clip": cc["name"], "track": cc["track"], "changes": changes})
+            break  # match first occurrence
+
+print(f"Added: {len(added)}, Removed: {len(removed)}, Modified: {len(modified)}")
 ```
 
-### Step 4 — Compare media pool
-
-```python
-pool1 = {(c["name"], c["file_path"]): c for c in snap1["media_pool"]}
-pool2 = {(c["name"], c["file_path"]): c for c in snap2["media_pool"]}
-
-added_media = set(pool2.keys()) - set(pool1.keys())
-removed_media = set(pool1.keys()) - set(pool2.keys())
-```
-
-### Step 5 — Present diff report
+### Step 4 — Present diff report
 
 ```
-## Snapshot Diff: <name1> vs <name2>
+## Diff: <active_name> (current) vs snapshot <snapshot_name>
 
-**<name1>**: <timestamp1>
-**<name2>**: <timestamp2>
+**Snapshot taken:** <timestamp>
 
-### Timeline Changes
-- Added timelines: <list or "none">
-- Removed timelines: <list or "none">
+### Summary
+- Clips added since snapshot: N
+- Clips removed since snapshot: N
+- Clips modified since snapshot: N
 
-### <timeline_name>
-| Change | Clip | Track | Details |
-|--------|------|-------|---------|
-| Added | clip_name | V1 | duration: 120 frames |
-| Removed | clip_name | V2 | was at frame 1200 |
-| Modified | clip_name | V1 | start: 100 -> 105, duration: 120 -> 115 |
+### Added Clips (new since snapshot)
+| Clip | Track | Start | Duration |
+...
 
-### Media Pool Changes
-- Added: N clips
-- Removed: N clips
+### Removed Clips (were in snapshot, now gone)
+| Clip | Track | Start | Duration |
+...
+
+### Modified Clips
+| Clip | Track | Changes |
+|------|-------|---------|
+| clip_name | V1 | ZoomX: 1.0 -> 1.5, Pan: 0 -> 25 |
+| clip_name | V2 | start: 100 -> 105, duration: 120 -> 115 |
 ```
 
-If there are no differences, report "Snapshots are identical."
+Only show sections with entries. If nothing changed, report:
+
+> No differences found between the active timeline and snapshot "<name>".
 
 ## Implementation notes
 
@@ -576,6 +630,7 @@ If there are no differences, report "Snapshots are identical."
 /snapshot save ColorSession       — saves as ColorSession_20260320
 /snapshot restore                 — pick a snapshot, import the .drp project backup
 /snapshot restore timeline        — pick a snapshot, restore transforms on active timeline
-/snapshot diff Snapshot_20260319 ColorSession_20260320
+/snapshot diff                   — compare active timeline clips against most recent snapshot
+/snapshot diff ColorSession_20260320  — compare active timeline clips against a specific snapshot
 /snapshot list
 ```

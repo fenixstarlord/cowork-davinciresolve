@@ -48,7 +48,7 @@ Claude Desktop (Cowork) → MCP Server (stdio) → DaVinci Resolve Scripting API
 | `/deliver` | Queue multi-format renders and monitor progress |
 | `/organize` | Auto-organize media pool clips into bins by metadata |
 | `/audit` | Inspect active timeline for common issues (gaps, mixed FPS, etc.) |
-| `/snapshot` | Save dated project snapshot with .drp export to Desktop; diff snapshots across sessions |
+| `/snapshot` | Save/restore/diff project snapshots with .drp export to Desktop |
 
 ## Before Committing
 
