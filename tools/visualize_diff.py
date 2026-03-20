@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-"""Visualize zoom and pan changes between two snapshot clips."""
+"""Generate SVG visualizations of zoom/pan changes between snapshot clips.
+
+No external dependencies — pure Python, outputs SVG strings.
+"""
 
 import json
 import os
-import sys
-
-try:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-except ImportError:
-    print("pip install matplotlib")
-    sys.exit(1)
 
 
 def load_snapshot(path):
@@ -27,108 +20,116 @@ def get_video_clips(snap, timeline_name):
     return []
 
 
-def compute_viewport(zoom_x, zoom_y, pan, tilt, frame_w=1920, frame_h=1080):
-    """Return (x, y, w, h) of the visible viewport in source-pixel coords."""
-    vw = frame_w / zoom_x
-    vh = frame_h / zoom_y
-    cx = frame_w / 2 + pan
-    cy = frame_h / 2 + tilt
+def compute_viewport(zoom_x, zoom_y, pan, tilt, fw=1920, fh=1080):
+    """Visible viewport rect in source-pixel coords."""
+    vw = fw / zoom_x
+    vh = fh / zoom_y
+    cx = fw / 2 + pan
+    cy = fh / 2 + tilt
     return cx - vw / 2, cy - vh / 2, vw, vh
 
 
-def draw_clip_comparison(ax, clip_name, before, after, frame_w=1920, frame_h=1080):
-    """Draw a single clip's before/after viewport on one axes."""
-    ax.set_xlim(-100, frame_w + 100)
-    ax.set_ylim(frame_h + 100, -100)  # y-down like video
-    ax.set_aspect("equal")
-    ax.set_title(clip_name, fontsize=11, fontweight="bold", pad=10)
+def clip_svg(clip_name, before, after, fw=1920, fh=1080):
+    """Return an SVG string for one clip's before/after viewport comparison."""
+    # Scale everything into a 400x250 viewBox with some padding
+    pad = 20
+    vb_w, vb_h = 400, 260
+    scale = min((vb_w - 2 * pad) / fw, (vb_h - 50 - 2 * pad) / fh)
+    ox = (vb_w - fw * scale) / 2
+    oy = 40 + (vb_h - 40 - fh * scale) / 2
 
-    # Full source frame
-    frame = patches.Rectangle(
-        (0, 0), frame_w, frame_h,
-        linewidth=1.5, edgecolor="#555", facecolor="#1a1a2e", linestyle="-"
-    )
-    ax.add_patch(frame)
-    ax.text(frame_w / 2, frame_h / 2, f"{frame_w}x{frame_h}",
-            ha="center", va="center", color="#444", fontsize=9)
+    def tx(x):
+        return ox + x * scale
+
+    def ty(y):
+        return oy + y * scale
+
+    def tw(w):
+        return w * scale
+
+    lines = []
+    lines.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {vb_w} {vb_h}"'
+                 f' width="{vb_w}" height="{vb_h}" style="background:#111119;border-radius:8px">')
+
+    # Title
+    lines.append(f'  <text x="{vb_w/2}" y="24" text-anchor="middle"'
+                 f' fill="#e0e0e0" font-family="sans-serif" font-size="13" font-weight="bold">'
+                 f'{clip_name}</text>')
+
+    # Source frame
+    lines.append(f'  <rect x="{tx(0):.1f}" y="{ty(0):.1f}"'
+                 f' width="{tw(fw):.1f}" height="{tw(fh):.1f}"'
+                 f' fill="#1a1a2e" stroke="#444" stroke-width="1"/>')
+    lines.append(f'  <text x="{tx(fw/2):.1f}" y="{ty(fh/2)+4:.1f}" text-anchor="middle"'
+                 f' fill="#333" font-family="sans-serif" font-size="9">{fw}x{fh}</text>')
 
     # Before viewport
     bx, by, bw, bh = compute_viewport(
         before.get("ZoomX", 1), before.get("ZoomY", 1),
-        before.get("Pan", 0), before.get("Tilt", 0),
-        frame_w, frame_h
-    )
-    before_rect = patches.Rectangle(
-        (bx, by), bw, bh,
-        linewidth=2.5, edgecolor="#4fc3f7", facecolor="#4fc3f722",
-        linestyle="--", label="Before"
-    )
-    ax.add_patch(before_rect)
+        before.get("Pan", 0), before.get("Tilt", 0), fw, fh)
+    lines.append(f'  <rect x="{tx(bx):.1f}" y="{ty(by):.1f}"'
+                 f' width="{tw(bw):.1f}" height="{tw(bh):.1f}"'
+                 f' fill="rgba(79,195,247,0.08)" stroke="#4fc3f7" stroke-width="2"'
+                 f' stroke-dasharray="6 3"/>')
 
     # After viewport
-    ax2, ay, aw, ah = compute_viewport(
+    ax, ay, aw, ah = compute_viewport(
         after.get("ZoomX", 1), after.get("ZoomY", 1),
-        after.get("Pan", 0), after.get("Tilt", 0),
-        frame_w, frame_h
-    )
-    after_rect = patches.Rectangle(
-        (ax2, ay), aw, ah,
-        linewidth=2.5, edgecolor="#ff7043", facecolor="#ff704322",
-        linestyle="-", label="After"
-    )
-    ax.add_patch(after_rect)
+        after.get("Pan", 0), after.get("Tilt", 0), fw, fh)
+    lines.append(f'  <rect x="{tx(ax):.1f}" y="{ty(ay):.1f}"'
+                 f' width="{tw(aw):.1f}" height="{tw(ah):.1f}"'
+                 f' fill="rgba(255,112,67,0.10)" stroke="#ff7043" stroke-width="2"/>')
 
     # Center crosshairs
-    bcx, bcy = bx + bw / 2, by + bh / 2
-    acx, acy = ax2 + aw / 2, ay + ah / 2
-    ax.plot(bcx, bcy, "+", color="#4fc3f7", markersize=12, markeredgewidth=2)
-    ax.plot(acx, acy, "+", color="#ff7043", markersize=12, markeredgewidth=2)
+    bcx, bcy = tx(bx + bw / 2), ty(by + bh / 2)
+    acx, acy = tx(ax + aw / 2), ty(ay + ah / 2)
+    cs = 6  # crosshair size
+    lines.append(f'  <line x1="{bcx-cs}" y1="{bcy}" x2="{bcx+cs}" y2="{bcy}" stroke="#4fc3f7" stroke-width="1.5"/>')
+    lines.append(f'  <line x1="{bcx}" y1="{bcy-cs}" x2="{bcx}" y2="{bcy+cs}" stroke="#4fc3f7" stroke-width="1.5"/>')
+    lines.append(f'  <line x1="{acx-cs}" y1="{acy}" x2="{acx+cs}" y2="{acy}" stroke="#ff7043" stroke-width="1.5"/>')
+    lines.append(f'  <line x1="{acx}" y1="{acy-cs}" x2="{acx}" y2="{acy+cs}" stroke="#ff7043" stroke-width="1.5"/>')
 
-    # Arrow showing pan/tilt shift
-    if abs(acx - bcx) > 0.5 or abs(acy - bcy) > 0.5:
-        ax.annotate("", xy=(acx, acy), xytext=(bcx, bcy),
-                     arrowprops=dict(arrowstyle="->", color="#ffee58",
-                                     lw=2, connectionstyle="arc3,rad=0.1"))
+    # Arrow from before center to after center
+    if abs(acx - bcx) > 1 or abs(acy - bcy) > 1:
+        lines.append(f'  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">'
+                     f'<path d="M0,0 L8,3 L0,6" fill="#ffee58"/></marker></defs>')
+        lines.append(f'  <line x1="{bcx:.1f}" y1="{bcy:.1f}" x2="{acx:.1f}" y2="{acy:.1f}"'
+                     f' stroke="#ffee58" stroke-width="1.5" marker-end="url(#ah)"/>')
 
-    # Annotation text
-    lines = []
-    zx_b, zx_a = before.get("ZoomX", 1), after.get("ZoomX", 1)
-    zy_b, zy_a = before.get("ZoomY", 1), after.get("ZoomY", 1)
-    p_b, p_a = before.get("Pan", 0), after.get("Pan", 0)
-    t_b, t_a = before.get("Tilt", 0), after.get("Tilt", 0)
+    # Change annotations
+    annotations = []
+    zxb, zxa = before.get("ZoomX", 1), after.get("ZoomX", 1)
+    zyb, zya = before.get("ZoomY", 1), after.get("ZoomY", 1)
+    pb, pa = before.get("Pan", 0), after.get("Pan", 0)
+    tb, ta = before.get("Tilt", 0), after.get("Tilt", 0)
+    if zxb != zxa or zyb != zya:
+        annotations.append(f"Zoom: {zxb}x → {zxa}x")
+    if pb != pa:
+        annotations.append(f"Pan: {pb} → {pa}")
+    if tb != ta:
+        annotations.append(f"Tilt: {tb} → {ta}")
 
-    if zx_b != zx_a or zy_b != zy_a:
-        lines.append(f"Zoom: {zx_b}x -> {zx_a}x")
-    if p_b != p_a:
-        lines.append(f"Pan: {p_b} -> {p_a}")
-    if t_b != t_a:
-        lines.append(f"Tilt: {t_b} -> {t_a}")
+    for i, text in enumerate(annotations):
+        lines.append(f'  <text x="{vb_w - 8}" y="{vb_h - 8 - (len(annotations)-1-i)*14:.0f}"'
+                     f' text-anchor="end" fill="#aaa" font-family="sans-serif" font-size="10"'
+                     f' font-style="italic">{text}</text>')
 
-    if lines:
-        ax.text(frame_w + 80, frame_h / 2, "\n".join(lines),
-                ha="right", va="center", fontsize=8,
-                color="#ccc", fontstyle="italic",
-                bbox=dict(boxstyle="round,pad=0.4", facecolor="#2a2a3e",
-                          edgecolor="#555", alpha=0.9))
+    # Legend
+    ly = vb_h - 8 - len(annotations) * 14 - 10
+    lines.append(f'  <rect x="8" y="{ly}" width="10" height="3" fill="#4fc3f7"/>')
+    lines.append(f'  <text x="22" y="{ly+3}" fill="#4fc3f7" font-family="sans-serif" font-size="9">Before</text>')
+    lines.append(f'  <rect x="8" y="{ly+10}" width="10" height="3" fill="#ff7043"/>')
+    lines.append(f'  <text x="22" y="{ly+13}" fill="#ff7043" font-family="sans-serif" font-size="9">After</text>')
 
-    ax.legend(loc="upper left", fontsize=8, facecolor="#1a1a2e",
-              edgecolor="#555", labelcolor="#ccc")
-    ax.set_facecolor("#0d0d1a")
-    ax.tick_params(colors="#555", labelsize=7)
-    for spine in ax.spines.values():
-        spine.set_color("#333")
+    lines.append('</svg>')
+    return "\n".join(lines)
 
 
-def main():
-    snap_dir = os.path.expanduser("~/.resolve-snapshots/SampleProject")
-    snap1 = load_snapshot(os.path.join(snap_dir, "BeforeEdit_20260319.json"))
-    snap2 = load_snapshot(os.path.join(snap_dir, "AfterEdit_20260320.json"))
+def diff_svg(snap1, snap2, timeline_name):
+    """Return a combined SVG for all clips with zoom/pan changes."""
+    clips_before = {c["name"]: c for c in get_video_clips(snap1, timeline_name)}
+    clips_after = {c["name"]: c for c in get_video_clips(snap2, timeline_name)}
 
-    tl_name = "Main Edit"
-    clips_before = {c["name"]: c for c in get_video_clips(snap1, tl_name)}
-    clips_after = {c["name"]: c for c in get_video_clips(snap2, tl_name)}
-
-    # Find clips with zoom/pan/tilt changes
     changed = []
     for name in clips_before:
         if name not in clips_after:
@@ -140,29 +141,43 @@ def main():
                 break
 
     if not changed:
-        print("No zoom/pan changes found.")
-        return
+        return "<p>No zoom/pan changes found.</p>"
 
-    fig, axes = plt.subplots(1, len(changed), figsize=(7 * len(changed), 5))
-    fig.patch.set_facecolor("#0d0d1a")
+    card_w, card_h = 400, 260
+    gap = 16
+    total_w = len(changed) * card_w + (len(changed) - 1) * gap + 40
+    total_h = card_h + 70
 
-    if len(changed) == 1:
-        axes = [axes]
+    parts = []
+    parts.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {total_w} {total_h}"'
+                 f' width="{total_w}" height="{total_h}" style="background:#0d0d1a;border-radius:10px">')
 
-    for ax_obj, name in zip(axes, changed):
-        draw_clip_comparison(ax_obj, name, clips_before[name], clips_after[name])
+    # Title
+    title = f"Zoom &amp; Pan Changes: {snap1['snapshot_name']} vs {snap2['snapshot_name']}"
+    parts.append(f'  <text x="{total_w/2}" y="28" text-anchor="middle"'
+                 f' fill="#e0e0e0" font-family="sans-serif" font-size="15" font-weight="bold">{title}</text>')
 
-    fig.suptitle(
-        f"Zoom & Pan Changes:  {snap1['snapshot_name']}  vs  {snap2['snapshot_name']}",
-        color="#eee", fontsize=13, fontweight="bold", y=0.98
-    )
-    fig.tight_layout(rect=[0, 0, 1, 0.93])
+    for i, name in enumerate(changed):
+        x_off = 20 + i * (card_w + gap)
+        svg_inner = clip_svg(name, clips_before[name], clips_after[name])
+        parts.append(f'  <g transform="translate({x_off}, 44)">')
+        # Strip the outer <svg> wrapper and embed the content
+        for line in svg_inner.split("\n"):
+            if line.strip().startswith("<svg") or line.strip().startswith("</svg"):
+                continue
+            parts.append(f"    {line}")
+        # Background card
+        parts.insert(-len(svg_inner.split("\n")) + 2,
+                     f'    <rect width="{card_w}" height="{card_h}" rx="8"'
+                     f' fill="#111119" stroke="#282838" stroke-width="1"/>')
+        parts.append("  </g>")
 
-    out = os.path.expanduser("~/Desktop/snapshot_diff_visual.png")
-    fig.savefig(out, dpi=150, facecolor=fig.get_facecolor())
-    plt.close()
-    print(f"Saved: {out}")
+    parts.append("</svg>")
+    return "\n".join(parts)
 
 
 if __name__ == "__main__":
-    main()
+    snap_dir = os.path.expanduser("~/.resolve-snapshots/SampleProject")
+    snap1 = load_snapshot(os.path.join(snap_dir, "BeforeEdit_20260319.json"))
+    snap2 = load_snapshot(os.path.join(snap_dir, "AfterEdit_20260320.json"))
+    print(diff_svg(snap1, snap2, "Main Edit"))

@@ -553,12 +553,14 @@ for key in snap_lookup:
     if key not in current_lookup:
         removed.extend(snap_lookup[key])
 
-# Find modified clips
+# Find modified clips — track both change descriptions and before/after data
 modified = []
+transform_changes = []  # for SVG visualization
 for key in set(current_lookup.keys()) & set(snap_lookup.keys()):
     for cc in current_lookup[key]:
         for sc in snap_lookup[key]:
             changes = []
+            has_transform = False
             if cc["start"] != sc["start"]:
                 changes.append(f"start: {sc['start']} -> {cc['start']}")
             if cc["end"] != sc["end"]:
@@ -568,14 +570,23 @@ for key in set(current_lookup.keys()) & set(snap_lookup.keys()):
             for prop in ["ZoomX", "ZoomY", "Pan", "Tilt", "RotationAngle"]:
                 if cc.get(prop) != sc.get(prop):
                     changes.append(f"{prop}: {sc.get(prop)} -> {cc.get(prop)}")
+                    if prop in ("ZoomX", "ZoomY", "Pan", "Tilt"):
+                        has_transform = True
             if changes:
                 modified.append({"clip": cc["name"], "track": cc["track"], "changes": changes})
+            if has_transform:
+                transform_changes.append({"name": cc["name"], "before": sc, "after": cc})
             break  # match first occurrence
 
 print(f"Added: {len(added)}, Removed: {len(removed)}, Modified: {len(modified)}")
+print(f"Clips with transform changes: {len(transform_changes)}")
 ```
 
-### Step 4 — Present diff report
+### Step 4 — Present diff report with inline SVG visuals
+
+Present the text report first, then generate SVG viewport diagrams for any clips with zoom/pan/tilt changes.
+
+#### Text report
 
 ```
 ## Diff: <active_name> (current) vs snapshot <snapshot_name>
@@ -605,6 +616,81 @@ print(f"Added: {len(added)}, Removed: {len(removed)}, Modified: {len(modified)}"
 Only show sections with entries. If nothing changed, report:
 
 > No differences found between the active timeline and snapshot "<name>".
+
+#### SVG viewport visualizations
+
+For each clip in `transform_changes`, generate an inline SVG showing the before/after viewport overlaid on the source frame. Include these directly in the chat response after the text report.
+
+Each SVG card shows:
+- A dark rectangle representing the full source frame (1920x1080)
+- **Blue dashed rect** = snapshot viewport (before)
+- **Orange solid rect** = current viewport (after)
+- **Crosshairs** at each viewport center
+- **Yellow arrow** showing the pan/tilt shift direction
+- **Annotation text** listing the numeric changes (e.g. "Zoom: 1.0x → 1.5x, Pan: 0 → 25")
+
+Use this SVG template for each clip (substitute values):
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260"
+     style="background:#111119;border-radius:8px">
+  <!-- Title -->
+  <text x="200" y="24" text-anchor="middle" fill="#e0e0e0"
+        font-family="sans-serif" font-size="13" font-weight="bold">CLIP_NAME</text>
+
+  <!-- Source frame (scaled to fit) -->
+  <rect x="OX" y="OY" width="FW" height="FH" fill="#1a1a2e" stroke="#444" stroke-width="1"/>
+  <text x="CX" y="CY" text-anchor="middle" fill="#333"
+        font-family="sans-serif" font-size="9">1920x1080</text>
+
+  <!-- Before viewport (snapshot) — blue dashed -->
+  <rect x="BX" y="BY" width="BW" height="BH"
+        fill="rgba(79,195,247,0.08)" stroke="#4fc3f7" stroke-width="2" stroke-dasharray="6 3"/>
+
+  <!-- After viewport (current) — orange solid -->
+  <rect x="AX" y="AY" width="AW" height="AH"
+        fill="rgba(255,112,67,0.10)" stroke="#ff7043" stroke-width="2"/>
+
+  <!-- Center crosshairs -->
+  <line x1="BCX-6" y1="BCY" x2="BCX+6" y2="BCY" stroke="#4fc3f7" stroke-width="1.5"/>
+  <line x1="BCX" y1="BCY-6" x2="BCX" y2="BCY+6" stroke="#4fc3f7" stroke-width="1.5"/>
+  <line x1="ACX-6" y1="ACY" x2="ACX+6" y2="ACY" stroke="#ff7043" stroke-width="1.5"/>
+  <line x1="ACX" y1="ACY-6" x2="ACX" y2="ACY+6" stroke="#ff7043" stroke-width="1.5"/>
+
+  <!-- Arrow showing shift (if centers moved) -->
+  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+    <path d="M0,0 L8,3 L0,6" fill="#ffee58"/></marker></defs>
+  <line x1="BCX" y1="BCY" x2="ACX" y2="ACY"
+        stroke="#ffee58" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Legend -->
+  <rect x="8" y="LY" width="10" height="3" fill="#4fc3f7"/>
+  <text x="22" y="LY+3" fill="#4fc3f7" font-family="sans-serif" font-size="9">Snapshot</text>
+  <rect x="8" y="LY+10" width="10" height="3" fill="#ff7043"/>
+  <text x="22" y="LY+13" fill="#ff7043" font-family="sans-serif" font-size="9">Current</text>
+
+  <!-- Change annotations -->
+  <text x="392" y="ANN_Y" text-anchor="end" fill="#aaa"
+        font-family="sans-serif" font-size="10" font-style="italic">CHANGE_TEXT</text>
+</svg>
+```
+
+**How to compute the SVG coordinates:**
+
+```
+Scale factor: scale = min(360 / 1920, 190 / 1080)  ≈ 0.176
+Offset X:     ox = (400 - 1920 * scale) / 2
+Offset Y:     oy = 40 + (220 - 1080 * scale) / 2
+
+For a viewport with (zoom_x, zoom_y, pan, tilt):
+  vw = 1920 / zoom_x,  vh = 1080 / zoom_y
+  cx = 1920/2 + pan,    cy = 1080/2 + tilt
+  rect_x = ox + (cx - vw/2) * scale
+  rect_y = oy + (cy - vh/2) * scale
+  rect_w = vw * scale,  rect_h = vh * scale
+```
+
+Present one SVG per clip. If there are no transform changes, skip the SVG section entirely.
 
 ## Implementation notes
 
