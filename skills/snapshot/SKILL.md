@@ -28,7 +28,7 @@ If no subcommand is given, default to `save`.
 
 ### Step 1 — Generate snapshot name and capture project state
 
-If the user provides a name after `save`, use it as the snapshot name. Otherwise, auto-generate as `Snapshot_YYYYMMDD` (e.g., `Snapshot_20260320`). If a snapshot with the same name already exists, append an incrementing suffix: `Snapshot_20260320_2`, `Snapshot_20260320_3`, etc.
+The snapshot name is `<name>_YYYYMMDD` — the date is always appended. If the user provides a name after `save`, use it as the prefix. Otherwise, default to `Snapshot`. Examples: `Snapshot_20260320`, `ColorSession_20260320`. If a snapshot with the same date-based name already exists, append the current time (`_HHMM`) to disambiguate: `ColorSession_20260320_1430`.
 
 ```python
 import json
@@ -36,21 +36,21 @@ import os
 from datetime import datetime
 
 now = datetime.now()
+date_str = now.strftime('%Y%m%d')
+time_str = now.strftime('%H%M')
 
-# Use user-provided name, or default to Snapshot_YYYYMMDD
+# Use user-provided name as prefix, or default to "Snapshot"
 # user_name is the argument after "save", or None if not provided
-snapshot_name = user_name if user_name else f"Snapshot_{now.strftime('%Y%m%d')}"
+prefix = user_name if user_name else "Snapshot"
+snapshot_name = f"{prefix}_{date_str}"
 
-# Check for existing snapshots with the same name and increment if needed
+# If a snapshot with this name already exists, append the time
 snap_dir = os.path.expanduser("~/.resolve-snapshots")
 project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
 if os.path.exists(project_dir):
     existing = [f.replace(".json", "") for f in os.listdir(project_dir) if f.endswith(".json")]
     if snapshot_name in existing:
-        counter = 2
-        while f"{snapshot_name}_{counter}" in existing:
-            counter += 1
-        snapshot_name = f"{snapshot_name}_{counter}"
+        snapshot_name = f"{prefix}_{date_str}_{time_str}"
 
 snapshot = {
     "timestamp": now.isoformat(),
@@ -378,7 +378,7 @@ If there are no differences, report "Snapshots are identical."
 - **Large projects**: Break capture into per-timeline calls for projects with many timelines.
 - **Storage**: Snapshots are saved as JSON files in `~/.resolve-snapshots/<ProjectName>/`. Each snapshot is typically a few KB to a few MB depending on project size.
 - **Project export**: A `.drp` project file is exported to `~/Desktop/<snapshot_name>/`. This is a full Resolve project backup that can be re-imported.
-- **Auto-naming**: Snapshot names are always `Snapshot_YYYYMMDD`. Same-day snapshots get a numeric suffix (`_2`, `_3`, etc.).
+- **Auto-naming**: Snapshot names are always `<prefix>_YYYYMMDD` (default prefix: `Snapshot`). If a same-day snapshot already exists, the time is appended: `<prefix>_YYYYMMDD_HHMM`.
 - **ExportProject**: `project_manager.ExportProject(projectName, filePath, withStillsAndLUTs)` exports the project database entry. The `withStillsAndLUTs` flag controls whether stills and LUTs are included (default False to keep exports small).
 - **Cross-session**: Snapshots persist on disk and can be compared across different sessions.
 
@@ -386,7 +386,7 @@ If there are no differences, report "Snapshots are identical."
 
 ```
 /snapshot save                    — saves as Snapshot_20260320
-/snapshot save ColorSession       — saves as ColorSession
-/snapshot diff Snapshot_20260319 ColorSession
+/snapshot save ColorSession       — saves as ColorSession_20260320
+/snapshot diff Snapshot_20260319 ColorSession_20260320
 /snapshot list
 ```
