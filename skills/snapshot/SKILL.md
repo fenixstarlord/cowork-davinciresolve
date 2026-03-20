@@ -582,64 +582,38 @@ print(f"Added: {len(added)}, Removed: {len(removed)}, Modified: {len(modified)}"
 print(f"Clips with transform changes: {len(transform_changes)}")
 ```
 
-### Step 4 — Generate HTML diff report and attach it
+### Step 4 — Present diff report
 
-Write a self-contained HTML file using the template at `tools/diff-visual.html` and attach it to the conversation. The template is zero-dependency (no CDN, no React) and renders a dark-themed dashboard with SVG viewport diagrams.
-
-**How to use the template:**
-
-1. Read the template file from `tools/diff-visual.html` in this repository.
-2. Replace the `DATA` object in the `<script>` block with the actual diff results. The DATA shape is:
-
-```js
-const DATA = {
-  snapshotName: "ColorSession_20260320",    // snapshot being compared
-  timestamp: "2026-03-20T14:30:00",         // when the snapshot was taken
-  timelineName: "Main Edit",                // active timeline name
-  added: [
-    { name: "NewClip.mov", track: 1, start: 100, duration: 50 },
-  ],
-  removed: [
-    { name: "OldClip.mov", track: 2, start: 200, duration: 80 },
-  ],
-  transforms: [
-    {
-      name: "Interview_A.mov", track: 1,
-      before: { ZoomX: 1.0, ZoomY: 1.0, Pan: 0, Tilt: 0 },
-      after:  { ZoomX: 1.1, ZoomY: 1.1, Pan: -15, Tilt: 0 },
-    },
-  ],
-};
-```
-
-3. Write the populated HTML to a temporary file (e.g. `/tmp/snapshot-diff-<name>.html`).
-4. Attach the HTML file to the conversation so the user can click to view it.
-
-Also include a brief text summary in the chat message:
+Present the results as a text report:
 
 ```
-## Snapshot Diff: <timeline_name> vs <snapshot_name>
+## Diff: <active_name> (current) vs snapshot <snapshot_name>
 
-- Added: N clips
-- Removed: N clips
-- Transform changes: N clips
+**Snapshot taken:** <timestamp>
 
-See the attached visual report for details.
+### Summary
+- Clips added since snapshot: N
+- Clips removed since snapshot: N
+- Clips modified since snapshot: N
+
+### Added Clips (new since snapshot)
+| Clip | Track | Start | Duration |
+...
+
+### Removed Clips (were in snapshot, now gone)
+| Clip | Track | Start | Duration |
+...
+
+### Modified Clips
+| Clip | Track | Changes |
+|------|-------|---------|
+| clip_name | V1 | ZoomX: 1.0 -> 1.5, Pan: 0 -> 25 |
+| clip_name | V2 | start: 100 -> 105, duration: 120 -> 115 |
 ```
 
-If nothing changed, skip the HTML attachment and just report:
+Only show sections with entries. If nothing changed, report:
 
 > No differences found between the active timeline and snapshot "<name>".
-
-**What the HTML dashboard shows:**
-
-- **Header** with timeline name, snapshot name, and timestamp
-- **Summary bar** with added/removed/modified counts
-- **Transform cards** — one per clip with:
-  - Track badge and clip name
-  - SVG viewport diagram: blue dashed rect (snapshot), orange solid rect (current), yellow shift arrow, crosshairs
-  - Change pills showing before → after values
-- **Added/Removed tables** listing clips that were added or removed since the snapshot
 
 ## Implementation notes
 
