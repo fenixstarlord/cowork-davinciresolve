@@ -2,7 +2,7 @@
 name: snapshot
 description: Take a snapshot of the current project state, export a project backup to the Desktop, or compare two snapshots to see what changed.
 user-invocable: true
-argument-hint: "[save | diff <name1> <name2> | list]"
+argument-hint: "[save [<name>] | diff <name1> <name2> | list]"
 allowed-tools: mcp__davinci-resolve__run_resolve_code, mcp__davinci-resolve__get_project_info, mcp__davinci-resolve__refresh_connection
 ---
 
@@ -17,7 +17,7 @@ Take a snapshot of the current project state (timeline structure, clip list, ren
 ## Usage
 
 ```
-/snapshot save               — Save a snapshot named Snapshot_YYYYMMDD and export project to Desktop
+/snapshot save [<name>]      — Save a snapshot and export project to Desktop (default name: Snapshot_YYYYMMDD)
 /snapshot diff <name1> <name2>  — Compare two snapshots
 /snapshot list               — List all saved snapshots
 ```
@@ -28,7 +28,7 @@ If no subcommand is given, default to `save`.
 
 ### Step 1 — Generate snapshot name and capture project state
 
-The snapshot name is always auto-generated as `Snapshot_YYYYMMDD` (e.g., `Snapshot_20260320`). If a snapshot with the same name already exists (same day), append an incrementing suffix: `Snapshot_20260320_2`, `Snapshot_20260320_3`, etc.
+If the user provides a name after `save`, use it as the snapshot name. Otherwise, auto-generate as `Snapshot_YYYYMMDD` (e.g., `Snapshot_20260320`). If a snapshot with the same name already exists, append an incrementing suffix: `Snapshot_20260320_2`, `Snapshot_20260320_3`, etc.
 
 ```python
 import json
@@ -36,9 +36,12 @@ import os
 from datetime import datetime
 
 now = datetime.now()
-snapshot_name = f"Snapshot_{now.strftime('%Y%m%d')}"
 
-# Check for existing same-day snapshots and increment if needed
+# Use user-provided name, or default to Snapshot_YYYYMMDD
+# user_name is the argument after "save", or None if not provided
+snapshot_name = user_name if user_name else f"Snapshot_{now.strftime('%Y%m%d')}"
+
+# Check for existing snapshots with the same name and increment if needed
 snap_dir = os.path.expanduser("~/.resolve-snapshots")
 project_dir = os.path.join(snap_dir, project.GetName().replace(" ", "_"))
 if os.path.exists(project_dir):
@@ -382,7 +385,8 @@ If there are no differences, report "Snapshots are identical."
 ## Examples
 
 ```
-/snapshot save
-/snapshot diff Snapshot_20260319 Snapshot_20260320
+/snapshot save                    — saves as Snapshot_20260320
+/snapshot save ColorSession       — saves as ColorSession
+/snapshot diff Snapshot_20260319 ColorSession
 /snapshot list
 ```
