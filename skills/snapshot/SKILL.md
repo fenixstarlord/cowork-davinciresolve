@@ -582,115 +582,64 @@ print(f"Added: {len(added)}, Removed: {len(removed)}, Modified: {len(modified)}"
 print(f"Clips with transform changes: {len(transform_changes)}")
 ```
 
-### Step 4 — Present diff report with inline SVG visuals
+### Step 4 — Generate HTML diff report and attach it
 
-Present the text report first, then generate SVG viewport diagrams for any clips with zoom/pan/tilt changes.
+Write a self-contained HTML file using the template at `tools/diff-visual.html` and attach it to the conversation. The template is zero-dependency (no CDN, no React) and renders a dark-themed dashboard with SVG viewport diagrams.
 
-#### Text report
+**How to use the template:**
+
+1. Read the template file from `tools/diff-visual.html` in this repository.
+2. Replace the `DATA` object in the `<script>` block with the actual diff results. The DATA shape is:
+
+```js
+const DATA = {
+  snapshotName: "ColorSession_20260320",    // snapshot being compared
+  timestamp: "2026-03-20T14:30:00",         // when the snapshot was taken
+  timelineName: "Main Edit",                // active timeline name
+  added: [
+    { name: "NewClip.mov", track: 1, start: 100, duration: 50 },
+  ],
+  removed: [
+    { name: "OldClip.mov", track: 2, start: 200, duration: 80 },
+  ],
+  transforms: [
+    {
+      name: "Interview_A.mov", track: 1,
+      before: { ZoomX: 1.0, ZoomY: 1.0, Pan: 0, Tilt: 0 },
+      after:  { ZoomX: 1.1, ZoomY: 1.1, Pan: -15, Tilt: 0 },
+    },
+  ],
+};
+```
+
+3. Write the populated HTML to a temporary file (e.g. `/tmp/snapshot-diff-<name>.html`).
+4. Attach the HTML file to the conversation so the user can click to view it.
+
+Also include a brief text summary in the chat message:
 
 ```
-## Diff: <active_name> (current) vs snapshot <snapshot_name>
+## Snapshot Diff: <timeline_name> vs <snapshot_name>
 
-**Snapshot taken:** <timestamp>
+- Added: N clips
+- Removed: N clips
+- Transform changes: N clips
 
-### Summary
-- Clips added since snapshot: N
-- Clips removed since snapshot: N
-- Clips modified since snapshot: N
-
-### Added Clips (new since snapshot)
-| Clip | Track | Start | Duration |
-...
-
-### Removed Clips (were in snapshot, now gone)
-| Clip | Track | Start | Duration |
-...
-
-### Modified Clips
-| Clip | Track | Changes |
-|------|-------|---------|
-| clip_name | V1 | ZoomX: 1.0 -> 1.5, Pan: 0 -> 25 |
-| clip_name | V2 | start: 100 -> 105, duration: 120 -> 115 |
+See the attached visual report for details.
 ```
 
-Only show sections with entries. If nothing changed, report:
+If nothing changed, skip the HTML attachment and just report:
 
 > No differences found between the active timeline and snapshot "<name>".
 
-#### SVG viewport visualizations
+**What the HTML dashboard shows:**
 
-For each clip in `transform_changes`, generate an inline SVG showing the before/after viewport overlaid on the source frame. Include these directly in the chat response after the text report.
-
-Each SVG card shows:
-- A dark rectangle representing the full source frame (1920x1080)
-- **Blue dashed rect** = snapshot viewport (before)
-- **Orange solid rect** = current viewport (after)
-- **Crosshairs** at each viewport center
-- **Yellow arrow** showing the pan/tilt shift direction
-- **Annotation text** listing the numeric changes (e.g. "Zoom: 1.0x → 1.5x, Pan: 0 → 25")
-
-Use this SVG template for each clip (substitute values):
-
-```svg
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="400" height="260"
-     style="background:#111119;border-radius:8px">
-  <!-- Title -->
-  <text x="200" y="24" text-anchor="middle" fill="#e0e0e0"
-        font-family="sans-serif" font-size="13" font-weight="bold">CLIP_NAME</text>
-
-  <!-- Source frame (scaled to fit) -->
-  <rect x="OX" y="OY" width="FW" height="FH" fill="#1a1a2e" stroke="#444" stroke-width="1"/>
-  <text x="CX" y="CY" text-anchor="middle" fill="#333"
-        font-family="sans-serif" font-size="9">1920x1080</text>
-
-  <!-- Before viewport (snapshot) — blue dashed -->
-  <rect x="BX" y="BY" width="BW" height="BH"
-        fill="rgba(79,195,247,0.08)" stroke="#4fc3f7" stroke-width="2" stroke-dasharray="6 3"/>
-
-  <!-- After viewport (current) — orange solid -->
-  <rect x="AX" y="AY" width="AW" height="AH"
-        fill="rgba(255,112,67,0.10)" stroke="#ff7043" stroke-width="2"/>
-
-  <!-- Center crosshairs -->
-  <line x1="BCX-6" y1="BCY" x2="BCX+6" y2="BCY" stroke="#4fc3f7" stroke-width="1.5"/>
-  <line x1="BCX" y1="BCY-6" x2="BCX" y2="BCY+6" stroke="#4fc3f7" stroke-width="1.5"/>
-  <line x1="ACX-6" y1="ACY" x2="ACX+6" y2="ACY" stroke="#ff7043" stroke-width="1.5"/>
-  <line x1="ACX" y1="ACY-6" x2="ACX" y2="ACY+6" stroke="#ff7043" stroke-width="1.5"/>
-
-  <!-- Arrow showing shift (if centers moved) -->
-  <defs><marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-    <path d="M0,0 L8,3 L0,6" fill="#ffee58"/></marker></defs>
-  <line x1="BCX" y1="BCY" x2="ACX" y2="ACY"
-        stroke="#ffee58" stroke-width="1.5" marker-end="url(#ah)"/>
-
-  <!-- Legend -->
-  <rect x="8" y="LY" width="10" height="3" fill="#4fc3f7"/>
-  <text x="22" y="LY+3" fill="#4fc3f7" font-family="sans-serif" font-size="9">Snapshot</text>
-  <rect x="8" y="LY+10" width="10" height="3" fill="#ff7043"/>
-  <text x="22" y="LY+13" fill="#ff7043" font-family="sans-serif" font-size="9">Current</text>
-
-  <!-- Change annotations -->
-  <text x="392" y="ANN_Y" text-anchor="end" fill="#aaa"
-        font-family="sans-serif" font-size="10" font-style="italic">CHANGE_TEXT</text>
-</svg>
-```
-
-**How to compute the SVG coordinates:**
-
-```
-Scale factor: scale = min(360 / 1920, 190 / 1080)  ≈ 0.176
-Offset X:     ox = (400 - 1920 * scale) / 2
-Offset Y:     oy = 40 + (220 - 1080 * scale) / 2
-
-For a viewport with (zoom_x, zoom_y, pan, tilt):
-  vw = 1920 / zoom_x,  vh = 1080 / zoom_y
-  cx = 1920/2 + pan,    cy = 1080/2 + tilt
-  rect_x = ox + (cx - vw/2) * scale
-  rect_y = oy + (cy - vh/2) * scale
-  rect_w = vw * scale,  rect_h = vh * scale
-```
-
-Present one SVG per clip. If there are no transform changes, skip the SVG section entirely.
+- **Header** with timeline name, snapshot name, and timestamp
+- **Summary bar** with added/removed/modified counts
+- **Transform cards** — one per clip with:
+  - Track badge and clip name
+  - SVG viewport diagram: blue dashed rect (snapshot), orange solid rect (current), yellow shift arrow, crosshairs
+  - Change pills showing before → after values
+- **Added/Removed tables** listing clips that were added or removed since the snapshot
 
 ## Implementation notes
 

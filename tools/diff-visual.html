@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapshot Diff — SNAPSHOT_NAME</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #09090f;
+    color: #e0e0e0;
+    font-family: 'Inter', 'SF Pro Display', -apple-system, sans-serif;
+    padding: 32px 24px;
+    min-height: 100vh;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Header bar */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 12px;
+    border: 1px solid #2a2a4a;
+    margin-bottom: 16px;
+  }
+  .header .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff7043;
+    box-shadow: 0 0 8px #ff704366;
+    flex-shrink: 0;
+  }
+  .header .title { font-size: 14px; font-weight: 600; }
+  .header .meta { font-size: 12px; color: #888; margin-left: auto; white-space: nowrap; }
+
+  /* Summary bar */
+  .summary {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .stat {
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: #111119;
+    border: 1px solid #282838;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .stat b { color: #e0e0e0; margin-right: 4px; }
+  .stat.added b { color: #66bb6a; }
+  .stat.removed b { color: #ef5350; }
+  .stat.modified b { color: #ff7043; }
+
+  /* Cards grid */
+  .cards {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card {
+    flex: 1 1 340px;
+    min-width: 320px;
+    background: linear-gradient(180deg, #111119 0%, #0d0d1a 100%);
+    border-radius: 12px;
+    border: 1px solid #282838;
+    padding: 16px;
+  }
+
+  /* Clip header inside card */
+  .clip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .track-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0d0d1a;
+    background: #ff7043;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+  }
+  .clip-name { font-size: 13px; font-weight: 600; }
+
+  /* SVG diagram */
+  .diagram {
+    width: 100%;
+    border-radius: 8px;
+    background: #0a0a14;
+    display: block;
+  }
+
+  /* Change pills */
+  .pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    font-size: 11px;
+  }
+  .pill .label { color: #888; font-weight: 500; }
+  .pill .before { color: #4fc3f7; }
+  .pill .arrow { color: #555; }
+  .pill .after { color: #ff7043; }
+
+  /* Added / Removed tables */
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 24px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1a1a2e;
+  }
+  .section-title.added { color: #66bb6a; }
+  .section-title.removed { color: #ef5350; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+  th {
+    text-align: left;
+    color: #888;
+    padding: 6px 10px;
+    border-bottom: 1px solid #1a1a2e;
+    font-weight: 500;
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #111119;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 0;
+    color: #555;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="container" id="root"></div>
+
+<script>
+// ── DATA (Claude fills this in) ─────────────────────────────────
+const DATA = {
+  snapshotName: "SNAPSHOT_NAME",
+  timestamp: "TIMESTAMP",
+  timelineName: "TIMELINE_NAME",
+  added: [
+    // { name: "NewClip.mov", track: 1, start: 100, duration: 50 }
+  ],
+  removed: [
+    // { name: "OldClip.mov", track: 1, start: 200, duration: 80 }
+  ],
+  transforms: [
+    // {
+    //   name: "Interview_A.mov", track: 1,
+    //   before: { ZoomX: 1.0, ZoomY: 1.0, Pan: 0, Tilt: 0 },
+    //   after:  { ZoomX: 1.1, ZoomY: 1.1, Pan: -15, Tilt: 0 },
+    // }
+  ],
+};
+
+// ── RENDER ───────────────────────────────────────────────────────
+const FW = 1920, FH = 1080, SCALE = 0.18;
+const CARD_W = FW * SCALE + 80;
+const CARD_H = FH * SCALE + 100;
+const OX = 40, OY = 50;
+
+function vp(zx, zy, pan, tilt) {
+  const vw = FW / (zx || 1), vh = FH / (zy || 1);
+  const cx = FW / 2 + (pan || 0), cy = FH / 2 + (tilt || 0);
+  return {
+    x: (cx - vw / 2) * SCALE, y: (cy - vh / 2) * SCALE,
+    w: vw * SCALE, h: vh * SCALE,
+    cx: cx * SCALE, cy: cy * SCALE,
+  };
+}
+
+function svgCard(clip, idx) {
+  const b = vp(clip.before.ZoomX, clip.before.ZoomY, clip.before.Pan, clip.before.Tilt);
+  const a = vp(clip.after.ZoomX, clip.after.ZoomY, clip.after.Pan, clip.after.Tilt);
+  const hasPanShift = Math.abs(a.cx - b.cx) > 0.5 || Math.abs(a.cy - b.cy) > 0.5;
+  const arrowId = `arrow-${idx}`;
+
+  let arrow = '';
+  if (hasPanShift) {
+    arrow = `
+      <defs><marker id="${arrowId}" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6" fill="#ffee58"/></marker></defs>
+      <line x1="${OX + b.cx}" y1="${OY + b.cy}" x2="${OX + a.cx}" y2="${OY + a.cy}"
+            stroke="#ffee58" stroke-width="1.5" marker-end="url(#${arrowId})"/>`;
+  }
+
+  const legendY = OY + FH * SCALE;
+  return `<svg class="diagram" viewBox="0 0 ${CARD_W} ${CARD_H}">
+    <rect x="${OX}" y="${OY}" width="${FW * SCALE}" height="${FH * SCALE}"
+          fill="#1a1a2e" stroke="#333" stroke-width="1"/>
+    <text x="${OX + FW * SCALE / 2}" y="${OY + FH * SCALE / 2 + 4}"
+          text-anchor="middle" fill="#282838" font-size="10" font-family="monospace">${FW}×${FH}</text>
+    <rect x="${OX + b.x}" y="${OY + b.y}" width="${b.w}" height="${b.h}"
+          fill="rgba(79,195,247,0.06)" stroke="#4fc3f7" stroke-width="2" stroke-dasharray="8 4"/>
+    <rect x="${OX + a.x}" y="${OY + a.y}" width="${a.w}" height="${a.h}"
+          fill="rgba(255,112,67,0.08)" stroke="#ff7043" stroke-width="2"/>
+    <line x1="${OX + b.cx - 7}" y1="${OY + b.cy}" x2="${OX + b.cx + 7}" y2="${OY + b.cy}" stroke="#4fc3f7" stroke-width="1.5"/>
+    <line x1="${OX + b.cx}" y1="${OY + b.cy - 7}" x2="${OX + b.cx}" y2="${OY + b.cy + 7}" stroke="#4fc3f7" stroke-width="1.5"/>
+    <line x1="${OX + a.cx - 7}" y1="${OY + a.cy}" x2="${OX + a.cx + 7}" y2="${OY + a.cy}" stroke="#ff7043" stroke-width="1.5"/>
+    <line x1="${OX + a.cx}" y1="${OY + a.cy - 7}" x2="${OX + a.cx}" y2="${OY + a.cy + 7}" stroke="#ff7043" stroke-width="1.5"/>
+    ${arrow}
+    <rect x="${OX + 4}" y="${legendY - 24}" width="8" height="3" fill="#4fc3f7"/>
+    <text x="${OX + 16}" y="${legendY - 21}" fill="#4fc3f7" font-size="8" font-family="sans-serif">Snapshot</text>
+    <rect x="${OX + 4}" y="${legendY - 14}" width="8" height="3" fill="#ff7043"/>
+    <text x="${OX + 16}" y="${legendY - 11}" fill="#ff7043" font-size="8" font-family="sans-serif">Current</text>
+  </svg>`;
+}
+
+function pills(clip) {
+  const diffs = [];
+  if (clip.before.ZoomX !== clip.after.ZoomX)
+    diffs.push({ label: 'Zoom', from: clip.before.ZoomX + 'x', to: clip.after.ZoomX + 'x' });
+  if (clip.before.Pan !== clip.after.Pan)
+    diffs.push({ label: 'Pan', from: clip.before.Pan, to: clip.after.Pan });
+  if (clip.before.Tilt !== clip.after.Tilt)
+    diffs.push({ label: 'Tilt', from: clip.before.Tilt, to: clip.after.Tilt });
+  return diffs.map(d =>
+    `<div class="pill">
+      <span class="label">${d.label}</span>
+      <span class="before">${d.from}</span>
+      <span class="arrow">&rarr;</span>
+      <span class="after">${d.to}</span>
+    </div>`
+  ).join('');
+}
+
+function tableRows(clips, cols) {
+  return clips.map(c =>
+    '<tr>' + cols.map(col => `<td>${c[col] ?? ''}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+function render() {
+  const root = document.getElementById('root');
+  const d = DATA;
+  const total = d.added.length + d.removed.length + d.transforms.length;
+
+  if (total === 0) {
+    root.innerHTML = `
+      <div class="header">
+        <div class="dot"></div>
+        <span class="title">No Differences</span>
+        <span class="meta">vs ${d.snapshotName}</span>
+      </div>
+      <div class="empty-state">Active timeline matches snapshot "${d.snapshotName}"</div>`;
+    return;
+  }
+
+  let html = `
+    <div class="header">
+      <div class="dot"></div>
+      <span class="title">${d.timelineName}</span>
+      <span class="meta">vs ${d.snapshotName} &middot; ${d.timestamp}</span>
+    </div>
+    <div class="summary">
+      ${d.added.length ? `<div class="stat added"><b>${d.added.length}</b> added</div>` : ''}
+      ${d.removed.length ? `<div class="stat removed"><b>${d.removed.length}</b> removed</div>` : ''}
+      ${d.transforms.length ? `<div class="stat modified"><b>${d.transforms.length}</b> transform changes</div>` : ''}
+    </div>`;
+
+  // Transform cards
+  if (d.transforms.length) {
+    html += '<div class="cards">';
+    d.transforms.forEach((clip, i) => {
+      html += `
+        <div class="card">
+          <div class="clip-header">
+            <span class="track-badge">V${clip.track}</span>
+            <span class="clip-name">${clip.name}</span>
+          </div>
+          ${svgCard(clip, i)}
+          <div class="pills">${pills(clip)}</div>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Added clips table
+  if (d.added.length) {
+    html += `<div class="section-title added">Added Clips</div>
+      <table><tr><th>Clip</th><th>Track</th><th>Start</th><th>Duration</th></tr>
+      ${tableRows(d.added, ['name', 'track', 'start', 'duration'])}</table>`;
+  }
+
+  // Removed clips table
+  if (d.removed.length) {
+    html += `<div class="section-title removed">Removed Clips</div>
+      <table><tr><th>Clip</th><th>Track</th><th>Start</th><th>Duration</th></tr>
+      ${tableRows(d.removed, ['name', 'track', 'start', 'duration'])}</table>`;
+  }
+
+  root.innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
