@@ -124,6 +124,11 @@ Just describe what you want to do in natural language:
 | `/transform-disable` | Disable transforms on timeline clips |
 | `/transform-enable` | Re-enable transforms on timeline clips |
 | `/roundtrip` | Roundtrip render: render clips, export XML, import as new timeline |
+| `/conform` | Compare two timelines and report conformance differences |
+| `/deliver` | Queue multi-format renders and monitor progress |
+| `/organize` | Auto-organize media pool clips into bins by metadata |
+| `/audit` | Inspect active timeline for common issues (gaps, mixed FPS, etc.) |
+| `/snapshot` | Save/restore/diff project snapshots with .drp export to Desktop |
 
 ## How It Works
 
@@ -203,7 +208,12 @@ cowork-davinciresolve/
 │   ├── version-up/SKILL.md       # /version-up
 │   ├── transform-disable/SKILL.md # /transform-disable
 │   ├── transform-enable/SKILL.md  # /transform-enable
-│   └── roundtrip/SKILL.md        # /roundtrip
+│   ├── roundtrip/SKILL.md        # /roundtrip
+│   ├── conform/SKILL.md          # /conform
+│   ├── deliver/SKILL.md          # /deliver
+│   ├── organize/SKILL.md         # /organize
+│   ├── audit/SKILL.md            # /audit
+│   └── snapshot/SKILL.md         # /snapshot
 ├── docs/                         # Raw API documentation
 ├── examples/examples.json        # Few-shot examples
 ├── setup.sh                      # Install script (macOS/Linux)
